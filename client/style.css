@@ -1,0 +1,39 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+
+}
+
+#container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  overflow: hidden;
+}
+
+
+
+
+.game {
+  background: #666;
+}
+.game * {
+  pointer-events: none;
+}
+
+.sprite:before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -2px;
+  margin-top: -2px;
+  width: 4px;
+  height: 4px;
+  background: #000;
+}
