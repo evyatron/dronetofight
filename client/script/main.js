@@ -31,13 +31,22 @@ function start() {
   game.addLayer(layerPlayers);
   
   
+  window.addEventListener('PlayerReadyInServer', onPlayerReadyInServer);
   
+  Server.init();
+}
+
+function onPlayerReadyInServer(e) {
+  var data = e.detail || {};
+
   playerShip = new window.Ship({
-    'speed': 60
+    'id': data.id,
+    'speed': data.speed
   });
+  
   playerShip.moveTo(game.width / 2, game.height / 2);
   
-  Server.sendPlayerMetaData(playerShip);
+  Server.newPlayer(playerShip);
   
   layerPlayers.addSprite(playerShip.sprite);
 }
@@ -46,7 +55,15 @@ var velocity = new Vector(0, 0),
     acceleration = 0.05,
     turbo = 2;
 
-function onBeforeUpdate() {
+function onBeforeUpdate(dt) {
+  handlePlayerInput(dt);
+}
+
+function handlePlayerInput(dt) {
+  if (!playerShip) {
+    return;
+  }
+
   var input = game.Input;
 
   playerShip.sprite.lookAt(input.position);
@@ -73,23 +90,23 @@ function onBeforeUpdate() {
       keyUp = input.isKeyDown(input.KEYS.W),
       keyDown = input.isKeyDown(input.KEYS.S),
       isTurbo = input.isKeyDown(input.KEYS.SPACE),
-      ruboModifier = isTurbo? turbo : 1;
+      turboModifier = isTurbo? turbo : 1;
 
   if (keyRight) {
-    velocity.x += acceleration * ruboModifier;
+    velocity.x += acceleration * turboModifier;
   }
   if (keyLeft) {
-    velocity.x -= acceleration * ruboModifier;
+    velocity.x -= acceleration * turboModifier;
   }
   if (!keyRight && !keyLeft || keyRight && keyLeft) {
     velocity.x = 0;
   }
 
   if (keyUp) {
-    velocity.y -= acceleration * ruboModifier;
+    velocity.y -= acceleration * turboModifier;
   }
   if (keyDown) {
-    velocity.y += acceleration * ruboModifier;
+    velocity.y += acceleration * turboModifier;
   }
   if (!keyUp && !keyDown || keyUp && keyDown) {
     velocity.y = 0;
@@ -98,15 +115,17 @@ function onBeforeUpdate() {
   if (velocity.x || velocity.y) {
     var speed = new Vector(velocity);
 
-    speed.x = Math.max(Math.min(speed.x, ruboModifier), -ruboModifier);
-    speed.y = Math.max(Math.min(speed.y, ruboModifier), -ruboModifier);
+    speed.x = Math.max(Math.min(speed.x, turboModifier), -turboModifier);
+    speed.y = Math.max(Math.min(speed.y, turboModifier), -turboModifier);
 
     playerShip.sprite.applyForce(new Vector(speed).scale(playerShip.speed));
   }
 }
 
 function onAfterDraw() {
-  Server.sendPlayerTickData(playerShip);
+  if (playerShip) {
+    Server.sendPlayerTickData(playerShip);
+  }
 }
 
 
@@ -114,8 +133,6 @@ function onAfterDraw() {
 var Server = (function() {
   function Server() {
     this.socket = null;
-    
-    this.init();
   }
   
   Server.prototype = {
@@ -125,26 +142,45 @@ var Server = (function() {
       this.socket.on('tick', this.onServerTick.bind(this));
       this.socket.on('updatePlayers', this.onUpdatePlayers.bind(this));
       this.socket.on('removePlayer', this.onRemovePlayer.bind(this));
+      this.socket.on('addPlayer', this.onAddPlayer.bind(this));
+      this.socket.on('ready', this.onPlayerReadyInServer.bind(this));
     },
-    
+
     sendPlayerMetaData: function sendPlayerMetaData(player) {
-      this.socket.emit('playerMetaData', player.toMetaData());
+      console.info('[Server.emit] Send player meta data', player);
+      this.socket.emit('updateMetaData', player.toMetaData());
     },
     
     sendPlayerTickData: function sendPlayerTickData(player) {
-      this.socket.emit('playerTickData', player.toTickData());
+      this.socket.emit('updateTickData', player.toTickData());
     },
     
-    onRemovePlayer: function onRemovePlayer(playerData) {
-      console.info('Player removed:', playerData);
+    onPlayerReadyInServer: function onPlayerReadyInServer(data) {
+      console.info('[Server.on] Player ready in server', data);
+      window.dispatchEvent(new CustomEvent('PlayerReadyInServer', {
+        'detail': data
+      }));
+    },
+    
+    newPlayer: function newPlayer(player) {
+      console.info('[Server.emit] New player', player);
+      this.socket.emit('newPlayer', player.toMetaData());
+    },
+    
+    onRemovePlayer: function onRemovePlayer(playerId) {
       
-      var playerId = playerData.id,
-          player = PLAYERS[playerId];
-      
+      var player = PLAYERS[playerId];
       if (player) {
+        console.info('[Server.on]: Removing player', playerId);
         layerPlayers.removeSprite(player.sprite);
         delete PLAYERS[playerId];
+      } else {
+        console.warn('[Server.on]: Trying to remove non existent player! ', playerId);
       }
+    },
+    
+    onAddPlayer: function onAddPlayer(playerData) {
+      console.info('[Server.on] Player added', playerData);
     },
     
     onUpdatePlayers: function onUpdatePlayers(players) {
@@ -168,8 +204,9 @@ var Server = (function() {
       console.log('done creating players: ', PLAYERS)
     },
     
-    onServerTick: function onServerTick(players) {
-      var player;
+    onServerTick: function onServerTick(data) {
+      var players = data.players || {},
+          player;
       
       for (var id in players) {
         if (id === playerShip.id) {

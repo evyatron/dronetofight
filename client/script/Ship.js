@@ -1,6 +1,7 @@
 var Ship = (function() {
   function Ship(options) {
     this.id = '';
+    this.name = '';
     this.sprite = null;
     this.speed = 0;
     this.color = '';
@@ -13,6 +14,7 @@ var Ship = (function() {
       !options && (options = {});
 
       this.id = options.id || ('ship_' + Date.now());
+      this.name = options.name || ('Player_' + window.utils.random(1, 1000));
       this.speed = options.speed || 0;
       this.color = options.color || window.utils.random(['red', 'blue', 'green']);
 
@@ -32,14 +34,13 @@ var Ship = (function() {
     
     toMetaData: function toMetaData() {
       return {
-        'id': this.id,
+        'name': this.name,
         'color': this.color
       };
     },
     
     toTickData: function toTickData() {
       return {
-        'id': this.id,
         'x': this.sprite.position.x,
         'y': this.sprite.position.y,
         'angle': this.sprite.angle
