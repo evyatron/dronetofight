@@ -1,6 +1,7 @@
 var Sprite = (function() {
   function Sprite(options) {
     this.el = null;
+    this.elContent = null;
     this.id = '';
     this.type = '';
     this.src = '';
@@ -40,7 +41,7 @@ var Sprite = (function() {
 
     update: function update(dt) {
       var newVelocity = new Vector(this.velocity).scale(this.drag);
-      newVelocity.add(new Vector(this.acceleration).scale(dt));
+      newVelocity.add(this.acceleration.scale(dt));
       this.velocity = newVelocity;
 
       //.rotate(this.angle)
@@ -52,11 +53,12 @@ var Sprite = (function() {
 
     draw: function draw() {
       var pos = this.position,
-          x = Math.round((pos.x - this.width / 2) * 100) / 100
+          x = Math.round((pos.x - this.width / 2) * 100) / 100,
           y = Math.round((pos.y - this.height / 2) * 100) / 100,
           angle = Math.round(this.angle * 1000) / 1000;
 
-      this.el.style.transform = 'translate3d(' + x + 'px, ' + y + 'px, 0) rotate(' +  angle + 'deg)';
+      this.el.style.transform = 'translate3d(' + x + 'px, ' + y + 'px, 0)';
+      this.elContent.style.transform = 'rotate(' +  angle + 'deg)';
     },
 
     applyForce: function applyForce(force) {
@@ -70,7 +72,12 @@ var Sprite = (function() {
     setSize: function setSize(width, height) {
       this.width = width;
       this.height = height;
+
       this.el.style.cssText += 'width: ' + width + 'px; height: ' + height + 'px;';
+    },
+    
+    setColor: function setColor(color) {
+      this.elContent.style.backgroundColor= this.color = color;
     },
 
     create: function create() {
@@ -78,7 +85,11 @@ var Sprite = (function() {
       this.el.className = 'sprite ' + (this.type || '');
       this.el.style.cssText = 'z-index: ' + this.zIndex + ';' +
                               'position: absolute; top: 0; left: 0;';
-
+      
+      this.el.innerHTML = '<div class="content"></div>';
+      
+      this.elContent = this.el.querySelector('.content');
+      
       if (this.src) {
         this.el.style.backgroundImage = this.src;
         var img = new Image();
@@ -88,7 +99,7 @@ var Sprite = (function() {
         img.src = this.src;
       }
       if (this.color) {
-        this.el.style.backgroundColor  = this.color;
+        this.elContent.style.backgroundColor  = this.color;
       }
     }
   };

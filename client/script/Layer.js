@@ -5,6 +5,7 @@ var Layer = (function() {
     this.zIndex;
 
     this.sprites = [];
+    this.spritesMap = {};
 
     this.init(options);
   }
@@ -20,32 +21,35 @@ var Layer = (function() {
     },
 
     update: function update(dt) {
-      for (var i = 0, sprite; sprite = this.sprites[i++];) {
+      for (var i = 0, sprite; (sprite = this.sprites[i++]);) {
         sprite.update(dt);
       }
     },
 
     draw: function draw() {
-      for (var i = 0, sprite; sprite = this.sprites[i++];) {
+      for (var i = 0, sprite; (sprite = this.sprites[i++]);) {
         sprite.draw();
       }
     },
 
-    addSprite: function addSprite(spriteToAdd) {
-      for (var i = 0, sprite; sprite = this.sprites[i++];) {
-        if (sprite.id === spriteToAdd.id) {
-          return false;
-        }
+    add: function add(spriteToAdd) {
+      if (!spriteToAdd || this.spritesMap[spriteToAdd.id]) {
+        return;
       }
 
+      this.spritesMap[spriteToAdd.id] = spriteToAdd;
       this.sprites.push(spriteToAdd);
       this.el.appendChild(spriteToAdd.el);
 
       return true;
     },
 
-    removeSprite: function removeSprite(spriteToRemove) {
-      for (var i = 0, sprite; sprite = this.sprites[i++];) {
+    remove: function remove(spriteToRemove) {
+      if (!spriteToRemove || this.spritesMap[spriteToRemove.id]) {
+        return;
+      }
+      
+      for (var i = 0, sprite; (sprite = this.sprites[i++]);) {
         if (sprite.id === spriteToRemove.id) {
           spriteToRemove.el.parentNode.removeChild(spriteToRemove.el);
           this.sprites.splice(i - 1, 1);
@@ -55,6 +59,10 @@ var Layer = (function() {
       }
 
       return false;
+    },
+    
+    get: function get(id) {
+      return this.spritesMap[id];
     },
 
     createElement: function createElement() {

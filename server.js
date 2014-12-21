@@ -29,15 +29,6 @@ router.use(express.static(path.resolve(__dirname, 'client')));
 
 var GAMES = {};
 
-
-// Main Game Loop
-gameloop.setGameLoop(function(delta) {
-  for (var id in GAMES) {
-    GAMES[id].tick(delta);
-  }
-}, 1000 / 30);
-
-
 var EVENTS_FROM_CLIENT = {
   GAME: {
   },
@@ -59,10 +50,40 @@ var EVENTS_TO_CLIENT = {
   PLAYER: {
     READY: 'ready',
     JOIN_GAME: 'joinGame',
-    LEAVE_GAME: 'leaveGame'
+    LEAVE_GAME: 'leaveGame',
+    UPDATE_META_DATA: 'updateMetaData'
   }
 };
 
+var UI_DATA = {
+  "colors": [
+    {
+      "id": 0,
+      "name": "Fire",
+      "color": "rgba(255, 170, 0, 1)"
+    },
+    {
+      "id": 1,
+      "name": "Envy",
+      "color": "rgba(41, 185, 21, 1)"
+    },
+    {
+      "id": 2,
+      "name": "Skyline",
+      "color": "rgba(14, 51, 199, 1)"
+    },
+    {
+      "id": 3,
+      "name": "Lavender",
+      "color": "rgba(206, 211, 237, 1)"
+    },
+    {
+      "id": 4,
+      "name": "Candy",
+      "color": "rgba(232, 170, 239, 1)"
+    }
+  ]
+};
 
 var Game = (function() {
   function Game(options) {
@@ -79,7 +100,7 @@ var Game = (function() {
       GAMES[this.id] = this;
     },
     
-    tick: function tick(dt) {
+    update: function update(dt) {
       var data = {
             'players': {}
           },
@@ -148,6 +169,90 @@ var Game = (function() {
   return Game;
 }());
 
+var Skill = (function() {
+  function Skill(options) {
+    this.type = '';
+    this.cooldown = 0;
+    this.damage = 0;
+    this.isReady = true;
+    this.timeSinceFire = 0;
+    
+    this.onReady;
+    
+    this.init(options);
+  }
+  
+  Skill.prototype = {
+    init: function init(options) {
+      this.id = options.id || ('skill-' + uuid.v4());
+      this.type = options.type || 'Skill';
+      this.cooldown = options.cooldown || 1;
+      this.damage = options.damage || 1;
+      
+      this.onReady = options.onReady || function(){};
+    },
+    
+    use: function use() {
+      if (!this.isReady) {
+        return false;
+      }
+      
+      this.isReady = false;
+      this.timeSinceFire = 0;
+      
+      return true;
+    },
+    
+    update: function update(dt) {
+      if (!this.isReady) {
+        this.timeSinceFire += dt;
+        
+        if (this.timeSinceFire >= this.cooldown) {
+          this.ready();
+        }
+      }
+      
+      return this.getTickData();
+    },
+    
+    getCooldownPercentage: function getCooldownPercentage() {
+      return ;
+    },
+    
+    getTickData: function getTickData() {
+      var cooldownPercentage = 1;
+      
+      if (!this.isReady) {
+        cooldownPercentage = this.timeSinceFire / this.cooldown;
+      }
+      
+      return {
+        'cooldownPercentage': cooldownPercentage
+      };
+    },
+    
+    getMetaData: function getMetaData() {
+      return {
+        'type': this.type,
+        'cooldown': this.cooldown,
+        'damage': this.damage
+      };
+    },
+    
+    ready: function ready() {
+      if (this.isReady) {
+        return;
+      }
+      
+      this.isReady = true;
+      this.timeSinceFire = 0;
+      this.onReady();
+    }
+  };
+  
+  return Skill;
+}());
+
 var Player = (function() {
   function Player(socket) {
     // Generated internal ID
@@ -155,11 +260,16 @@ var Player = (function() {
     
     // Player movement speed
     this.speed = 60;
+    
+    // Skills
+    this.skills = {};
 
     // The actual socket the player is using
     this.socket = socket;
     // Holds the tick data (position, rotation, etc)
-    this.tick = {};
+    this.tick = {
+      'skills': {}
+    };
     // Holds the meta data (id, name, etc)
     this.meta = {};
     
@@ -173,8 +283,8 @@ var Player = (function() {
     init: function init() {
       this.id = 'player-' + uuid.v4();
       this.speed = 60;
-      
-      console.log('[Player|' + this.id + ']: New player created');
+
+      this.createSkills();
       
       this.socket.on(EVENTS_FROM_CLIENT.PLAYER.READY,
                       this.onReady.bind(this));
@@ -185,14 +295,39 @@ var Player = (function() {
       this.socket.on(EVENTS_FROM_CLIENT.PLAYER.DISCONNECT,
                       this.disconnect.bind(this));
       
+      // Fire ready event to the client
       this.socket.emit(EVENTS_TO_CLIENT.PLAYER.READY, {
         'id': this.id,
-        'speed': this.speed
+        'speed': this.speed,
+        'skills': this.getSkillsMetaData(),
+        'ui': UI_DATA
       });
+      
+      console.log('[Player|' + this.id + ']: New player created');
+    },
+    
+    createSkills: function createSkills() {
+      var skillPrimary = new Skill({
+            'cooldown': 0.75,
+            'damage': 10
+          }),
+          skillSecondary = new Skill({
+            'cooldown': 2.5,
+            'damage': 35
+          });
+      
+      this.skills[skillPrimary.id] = skillPrimary;
+      this.skills[skillSecondary.id] = skillSecondary;
+      
+      this.tick.skills[skillPrimary.id] = skillPrimary.getTickData();
+      this.tick.skills[skillSecondary.id] = skillSecondary.getTickData();
     },
     
     update: function update(dt) {
-      // actual update (tick) logic
+      for (var id in this.skills) {
+        var tickData = this.skills[id].update(dt);
+        this.tick.skills[id] = tickData;
+      }
     },
     
     onReady: function onReady(metaData) {
@@ -249,20 +384,45 @@ var Player = (function() {
       for (var k in data) {
         this.meta[k] = data[k];
       }
+      
+      if (this.game) {
+        this.game.broadcast(EVENTS_TO_CLIENT.PLAYER.UPDATE_META_DATA, {
+          'id': this.id,
+          'meta': this.meta
+        });
+      }
     },
     
     updateTickData: function updateTickData(data) {
       for (var k in data) {
         this.tick[k] = data[k];
       }
+    },
+    
+    getSkillsMetaData: function getSkillsMetaData() {
+      var data = {};
+      for (var id in this.skills) {
+        data[id] = this.skills[id].getMetaData();
+      }
+      return data;
     }
   };
   
   return Player;
 }());
 
+
+
 // Create a demo single game for now
 var MAIN_GAME = new Game();
+
+// Main Game Loop
+gameloop.setGameLoop(function(delta) {
+  for (var id in GAMES) {
+    GAMES[id].update(delta);
+  }
+}, 1000 / 30);
+
 
 // New connection - new player
 function onNewSocketConnection(socket) {

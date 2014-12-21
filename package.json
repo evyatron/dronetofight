@@ -1,7 +1,7 @@
 {
   "name": "chat-example",
   "version": "0.0.0",
-  "description": "A chat example to showcase how to use `socket.io` with a static `express` server with `async` for control flow.",
+  "description": "Multiplayer game using socket.io",
   "main": "server.js",
   "repository": {
     "type": "git",

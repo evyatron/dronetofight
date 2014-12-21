@@ -1,10 +1,13 @@
-* {
+div, p, ul, li {
   margin: 0;
   padding: 0;
 }
 
 body {
-
+  font: normal 15px monospace;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 
 #container {
@@ -13,7 +16,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #000;
+  background: #fff;
   overflow: hidden;
 }
 
@@ -21,19 +24,71 @@ body {
 
 
 .game {
-  background: #666;
-}
-.game * {
-  pointer-events: none;
-}
-
-.sprite:before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -2px;
-  margin-top: -2px;
-  width: 4px;
-  height: 4px;
   background: #000;
 }
+.game * {
+  -pointer-events: none;
+}
+
+
+.sprite {
+  
+}
+  .sprite .content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+    .sprite .content:before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: -2px;
+      margin-top: -2px;
+      width: 4px;
+      height: 4px;
+      background: #000;
+    }
+  .sprite .name {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: 150px;
+    margin-left: -75px;
+    color: #000;
+    text-align: center;
+  }
+  .sprite .health {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: 150px;
+    margin-left: -75px;
+    margin-top: 20px;
+  }
+
+#ui {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  z-index: 50;
+  background: rgba(0, 0, 0, .8);
+  color: #fff;
+}
+  #ui label {
+    display: inline-block;
+    margin-right: 10px;
+  }
+  #ui span {
+    
+  }
+  #ui select {
+    
+  }
+    #ui option {
+      padding: 6px;
+    }

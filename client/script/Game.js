@@ -12,7 +12,6 @@ var Game = (function() {
     this.Input = null;
     this.onBeforeUpdate = null;
     this.onAfterUpdate = null;
-    this.onBeforeDraw = null;
     this.onAfterDraw = null;
 
     this._eventListeners = {};
@@ -30,7 +29,6 @@ var Game = (function() {
 
       this.onBeforeUpdate = options.onBeforeUpdate || function(){};
       this.onAfterUpdate = options.onAfterUpdate || function(){};
-      this.onBeforeDraw = options.onBeforeDraw || function(){};
       this.onAfterDraw = options.onAfterDraw || function(){};
 
       this._tick = this.tick.bind(this);
@@ -51,7 +49,7 @@ var Game = (function() {
     },
 
     addLayer: function addLayer(layerToAdd) {
-      for (var i = 0, layer; layer = this.layers[i++];) {
+      for (var i = 0, layer; (layer = this.layers[i++]);) {
         if (layer.id === layerToAdd.id) {
           return false;
         }
@@ -64,7 +62,7 @@ var Game = (function() {
     },
 
     removeLayer: function removeLayer(layerToRemove) {
-      for (var i = 0, layer; layer = this.layers[i++];) {
+      for (var i = 0, layer; (layer = this.layers[i++]);) {
         if (layer.id === layerToRemove.id) {
           layerToRemove.parentNode.removeChild(layerToRemove.el);
           this.layers.splice(i - 1, 1);
@@ -77,8 +75,8 @@ var Game = (function() {
     },
 
     tick: function tick() {
-      var now = Date.now();
-          dt = (now - this.lastUpdate) / 1000;
+      var now = Date.now(),
+          dt = Math.min((now - this.lastUpdate) / 1000, 1000 / 60);
 
       this.dt = dt;
 
@@ -87,19 +85,17 @@ var Game = (function() {
 
       this.onBeforeUpdate(dt);
 
-      for (i = 0; layer = layers[i++];) {
+      for (i = 0; (layer = layers[i++]);) {
         layer.update(dt);
       }
 
       this.onAfterUpdate(dt);
 
-      this.onBeforeDraw(dt);
-
-      for (i = 0; layer = layers[i++];) {
+      for (i = 0; (layer = layers[i++]);) {
         layer.draw();
       }
 
-      this.onAfterDraw(dt);
+      this.onAfterDraw();
 
       this.lastUpdate = now;
       window.requestAnimationFrame(this._tick);
@@ -182,10 +178,24 @@ var Input = (function() {
       this.updatePosition();
     },
 
-    isKeyDown: function isKeyDown(key) {
-      return !!this.keysDown[key];
+    // Check if a key(s) is down
+    // @keys (string|array)
+    isKeyDown: function isKeyDown(keys) {
+      if (Array.isArray(keys)) {
+        for (var i = 0, key; (key = keys[i++]);) {
+          if (this.keysDown[key]) {
+            return true;
+          }
+        }
+        
+        return false;
+      } else {
+        return !!this.keysDown[keys];
+      }
     },
 
+    // Update the user's mouse position
+    // @e (MouseEvent)
     updatePosition: function updatePosition(e) {
       if (e) {
         this._x = e.pageX;
@@ -196,104 +206,16 @@ var Input = (function() {
       this.position.y = (this._y - this.offsetY) / this.ratio;
     },
 
+    // On keyboard event - mark the key as pressed
+    // @e (KeyDownEvent)
     onKeyDown: function onKeyDown(e) {
-      var key = e.which || e.keyCode;
-      this.keysDown[key] = true;
+      this.keysDown[e.which || e.keyCode] = true;
     },
 
+    // On keyboard event - mark the key as not pressed anymore
+    // @e (KeyUpEvent)
     onKeyUp: function onKeyUp(e) {
-      var key = e.which || e.keyCode;
-      this.keysDown[key] = false;
-    },
-
-    KEYS: {
-      CTRL: 17,
-      CTRLRIGHT: 18,
-      CTRLR: 18,
-      SHIFT: 16,
-      RETURN: 13,
-      ENTER: 13,
-      BACKSPACE: 8,
-      BCKSP:8,
-      ALT: 18,
-      ALTR: 17,
-      ALTRIGHT: 17,
-      SPACE: 32,
-      WIN: 91,
-      MAC: 91,
-      FN: null,
-      UP: 38,
-      DOWN: 40,
-      LEFT: 37,
-      RIGHT: 39,
-      ESC: 27,
-      DEL: 46,
-      F1: 112,
-      F2: 113,
-      F3: 114,
-      F4: 115,
-      F5: 116,
-      F6: 117,
-      F7: 118,
-      F8: 119,
-      F9: 120,
-      F10: 121,
-      F11: 122,
-      F12: 123,
-      BACKSPACE: '8',
-      TAB: '9',
-      ENTER: '13',
-      SHIFT: '16',
-      CTRL: '17',
-      ALT: '18',
-      CAPS_LOCK: '20',
-      ESCAPE: '27',
-      PAGE_UP: '33',
-      PAGE_DOWN: '34',
-      END: '35',
-      HOME: '36',
-      LEFT_ARROW: '37',
-      UP_ARROW: '38',
-      RIGHT_ARROW: '39',
-      DOWN_ARROW: '40',
-      INSERT: '45',
-      DELETE: '46',
-      NUM_0: '48',
-      NUM_1: '49',
-      NUM_2: '50',
-      NUM_3: '51',
-      NUM_4: '52',
-      NUM_5: '53',
-      NUM_6: '54',
-      NUM_7: '55',
-      NUM_8: '56',
-      NUM_9: '57',
-      A: '65',
-      B: '66',
-      C: '67',
-      D: '68',
-      E: '69',
-      F: '70',
-      G: '71',
-      H: '72',
-      I: '73',
-      J: '74',
-      K: '75',
-      L: '76',
-      M: '77',
-      N: '78',
-      O: '79',
-      P: '80',
-      Q: '81',
-      R: '82',
-      S: '83',
-      T: '84',
-      U: '85',
-      V: '86',
-      W: '87',
-      X: '88',
-      Y: '89',
-      Z: '90'
+      this.keysDown[e.which || e.keyCode] = false;
     }
   };
 
