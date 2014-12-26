@@ -1,6 +1,7 @@
 div, p, ul, li {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 body {
@@ -16,7 +17,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fff;
+  background: #111;
   overflow: hidden;
 }
 
@@ -57,8 +58,9 @@ body {
     left: 50%;
     width: 150px;
     margin-left: -75px;
-    color: #000;
+    color: #fff;
     text-align: center;
+    transform: translateZ(0);
   }
   .sprite .health {
     position: absolute;
@@ -91,4 +93,98 @@ body {
   }
     #ui option {
       padding: 6px;
+      font-size: 1.5em;
     }
+
+.chat {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  margin: 20px;
+  width: 370px;
+  height: 210px;
+}
+  .chat .window {
+    position: absolute;
+    top: 30px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+  }
+  .chat .window.active {
+    z-index: 10;
+  }
+    .chat .window .name {
+      position: absolute;
+      bottom: 100%;
+      left: 10px;
+      width: 80px;
+      height: 27px;
+      line-height: 25px;
+      margin-bottom: -1px;
+      padding: 0 4px;
+      border: 1px solid #aaa;
+      color: #aaa;
+      z-index: 10;
+      border-radius: 1px 1px 0 0;
+      cursor: pointer;
+    }
+    .chat .window .name:hover {
+      background: rgba(255, 255, 255, .5);
+      color: #000;
+    }
+    .chat .window.active .name {
+      height: 30px;
+      line-height: 28px;
+      color: #fff;
+      border: 1px solid #fff;
+      background: rgba(0, 0, 0, .5);
+      border-bottom-color: #000;
+      pointer-events: none;
+    }
+    .chat .window:nth-child(2) .name {
+      margin-left: 79px;
+    }
+    .chat .window:nth-child(3) .name {
+      margin-left: 158px;
+    }
+    .chat .window:nth-child(4) .name {
+      margin-left: 237px;
+    }
+    
+    .chat .window .messages {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 5;
+      font-size: 0.8em;
+      opacity: 0;
+      border: 1px solid #fff;
+      background: rgba(0, 0, 0, .5);
+      color: #fff;
+      overflow-x: hidden;
+      overflow-y: auto;
+      pointer-events: none;
+      user-select: text;
+      -webkit-user-select: text;
+      -moz-user-select: text;
+    }
+    .chat .window.active .messages {
+      opacity: 1;
+      pointer-events: inherit;
+    }
+      .chat .window .messages > div {
+        padding: 3px;
+      }
+      .chat .window .messages .timestamp {
+        display: inline-block;
+      }
+      .chat .window .messages .server .message {
+        font-style: italic;
+      }
+      .chat .window .messages .name {
+        font-weight: bold;
+      }

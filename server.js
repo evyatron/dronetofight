@@ -44,7 +44,6 @@ var EVENTS_TO_CLIENT = {
   GAME: {
     UPDATE_PLAYERS_LIST: 'updatePlayers',
     PLAYER_LEAVE: 'removePlayer',
-    PLAYER_JOIN: 'addPlayer',
     TICK: 'tick'
   },
   PLAYER: {
@@ -52,6 +51,10 @@ var EVENTS_TO_CLIENT = {
     JOIN_GAME: 'joinGame',
     LEAVE_GAME: 'leaveGame',
     UPDATE_META_DATA: 'updateMetaData'
+  },
+  CHAT: {
+    ADD_WINDOW: 'chatAddWindow',
+    ADD_MESSAGE: 'chatNewMessage'
   }
 };
 
@@ -85,10 +88,29 @@ var UI_DATA = {
   ]
 };
 
+var CHAT_WINDOWS = {
+      ALL: 'all',
+      TEAM: 'team'
+    },
+    CHAT_WINDOWS_ORDER = [
+      {
+        'id': CHAT_WINDOWS.ALL,
+        'name': 'Game'
+      },
+      {
+        'id': CHAT_WINDOWS.TEAM,
+        'name': 'Team'
+      }
+    ],
+    CHAT_MESSAGE_TYPES = {
+      SERVER: 'server'
+    };
+
 var Game = (function() {
   function Game(options) {
     this.id = '';
     this.players = {};
+    this.chat;
 
     this.init(options);
   }
@@ -96,6 +118,11 @@ var Game = (function() {
   Game.prototype = {
     init: function init(options) {
       this.id = 'game-' + uuid.v4();
+      this.chat = new Chat({
+        'game': this,
+        'windows': CHAT_WINDOWS_ORDER,
+        'players': this.players
+      });
       
       GAMES[this.id] = this;
     },
@@ -115,7 +142,7 @@ var Game = (function() {
       
       // Prepate data to be sent to the players
       for (id in this.players) {
-        data.players[id] = this.players[id].tick;
+        data.players[id] = this.players[id].getTickData();
       }
       
       this.broadcast(EVENTS_TO_CLIENT.GAME.TICK, data);
@@ -131,34 +158,35 @@ var Game = (function() {
       
       // Add the player to the list
       this.players[player.id] = player;
-
-      // Tell everyone (including the new player) there's a new player
-      this.broadcast(EVENTS_TO_CLIENT.GAME.PLAYER_JOIN, player.meta);
-      // Send everyone (including the new player) the players list
-      this.broadcastPlayersList();
+      
+      // Add the player to the chat window
+      this.chat.addPlayer(player);
     },
     
     removePlayer: function removePlayer(player) {
-      if (this.players[player.id]) {
-        console.log('[Game|' + this.id + ']: Remove player: ', player.meta);
-
-        this.broadcast(EVENTS_TO_CLIENT.GAME.PLAYER_LEAVE, player.id);
-        delete this.players[player.id];
-      }
+      console.log('[Game|' + this.id + ']: Remove player: ', player.meta);
+      this.chat.removePlayer(player);
+      delete this.players[player.id];
     },
     
-    broadcastPlayersList: function broadcastPlayersList() {
-      var players = {};
-      
+    getPlayersList: function getPlayersList() {
+      var players = {},
+          player;
+
       for (var id in this.players) {
-        players[id] = this.players[id].meta;
+        player = this.players[id];
+
+        players[id] = {
+          'meta': player.meta,
+          'tick': player.tick
+        };
       }
       
-      console.log('[Game|' + this.id + ']: Broadcast players: ', players);
+      console.log('[Game|' + this.id + ']: players list: ', players);
 
-      this.broadcast(EVENTS_TO_CLIENT.GAME.UPDATE_PLAYERS_LIST, players);
+      return players;
     },
-    
+
     broadcast: function broadcast(event, data) {
       for (var id in this.players) {
         this.players[id].socket.emit(event, data);
@@ -276,6 +304,8 @@ var Player = (function() {
     // A reference to the player's game
     this.game = null;
     
+    this.shouldSendMeta = true;
+    
     this.init();
   }
   
@@ -306,6 +336,20 @@ var Player = (function() {
       console.log('[Player|' + this.id + ']: New player created');
     },
     
+    getTickData: function getTickData() {
+      var data = {
+        'meta': null,
+        'tick': this.tick
+      };
+      
+      if (this.shouldSendMeta) {
+        data.meta = this.meta;
+        this.shouldSendMeta = false;
+      }
+      
+      return data;
+    },
+    
     createSkills: function createSkills() {
       var skillPrimary = new Skill({
             'cooldown': 0.75,
@@ -325,8 +369,7 @@ var Player = (function() {
     
     update: function update(dt) {
       for (var id in this.skills) {
-        var tickData = this.skills[id].update(dt);
-        this.tick.skills[id] = tickData;
+        this.tick.skills[id] = this.skills[id].update(dt);
       }
     },
     
@@ -355,7 +398,8 @@ var Player = (function() {
       game.addPlayer(this);
       // Tell the player they joined
       this.socket.emit(EVENTS_TO_CLIENT.PLAYER.JOIN_GAME, {
-        'id': game.id
+        'id': game.id,
+        'players': game.getPlayersList()
       });
     },
     
@@ -385,12 +429,16 @@ var Player = (function() {
         this.meta[k] = data[k];
       }
       
+      this.shouldSendMeta = true;
+      
+      /*
       if (this.game) {
         this.game.broadcast(EVENTS_TO_CLIENT.PLAYER.UPDATE_META_DATA, {
           'id': this.id,
           'meta': this.meta
         });
       }
+      */
     },
     
     updateTickData: function updateTickData(data) {
@@ -411,6 +459,64 @@ var Player = (function() {
   return Player;
 }());
 
+var Chat = (function() {
+  function Chat(options) {
+    this.game;
+    this.windows = [];
+    this.players = {};
+    
+    this.server = {
+      'name': 'Server'
+    };
+    
+    this.init(options);
+  }
+  
+  Chat.prototype = {
+    init: function init(options) {
+      !options && (options = {});
+      
+      this.game = options.game;
+      this.windows = options.windows || [];
+    },
+    
+    addPlayer: function addPlayer(player) {
+      this.players[player.id] = player;
+      
+      this.sendWindowsToPlayer(player);
+      
+      this.game.broadcast(EVENTS_TO_CLIENT.CHAT.ADD_MESSAGE, {
+        'windowId': CHAT_WINDOWS.ALL,
+        'type': CHAT_MESSAGE_TYPES.SERVER,
+        'player': this.server,
+        'message': '<b>' +
+                    player.meta.name.replace(/</g, '&lt;') +
+                   '</b> Joined the game'
+      });
+    },
+    
+    removePlayer: function removePlayer(player) {
+      delete this.players[player.id];
+      
+      this.game.broadcast(EVENTS_TO_CLIENT.CHAT.ADD_MESSAGE, {
+        'windowId': CHAT_WINDOWS.ALL,
+        'type': CHAT_MESSAGE_TYPES.SERVER,
+        'player': this.server,
+        'message': '<b>' +
+                    player.meta.name.replace(/</g, '&lt;') +
+                   '</b> Left the game'
+      });
+    },
+    
+    sendWindowsToPlayer: function sendWindowsToPlayer(player) {
+      for (var i = 0, win; (win = this.windows[i++]);) {
+        player.socket.emit(EVENTS_TO_CLIENT.CHAT.ADD_WINDOW, win);
+      }
+    }
+  };
+  
+  return Chat;
+}());
 
 
 // Create a demo single game for now

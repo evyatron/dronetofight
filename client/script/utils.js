@@ -18,3 +18,31 @@ var utils = (function(){
   
   return new utils();
 }());
+
+// A simple template formatting method
+// Replaces {{propertyName}} with properties from the 'args' object
+String.prototype.format = function format(args) {
+  !args && (args = {});
+
+  return this.replace(/(\{\{([^\}]+)\}\})/g, function onMatch() {
+    var key = arguments[2],
+        shouldFormat = key.indexOf('(f)') === 0,
+        properties = key.replace('(f)', '').split('.'),
+        value = args;
+
+    // support nesting - "I AM {{ship.info.name}}"
+    for (var i = 0, property; (property = properties[i++]);) {
+      value = value[property];
+    }
+
+    if (value === undefined || value === null) {
+      value = arguments[0];
+    }
+
+    if (shouldFormat) {
+      value = window.utils.numberWithCommas(value);
+    }
+
+    return value;
+  });
+};

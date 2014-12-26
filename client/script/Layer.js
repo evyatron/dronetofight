@@ -45,7 +45,7 @@ var Layer = (function() {
     },
 
     remove: function remove(spriteToRemove) {
-      if (!spriteToRemove || this.spritesMap[spriteToRemove.id]) {
+      if (!spriteToRemove || !this.spritesMap[spriteToRemove.id]) {
         return;
       }
       

@@ -1,9 +1,15 @@
 var SPRITE_TYPES = {
   SHIP: 'ship'
 };
+var CHAT_TYPES = {
+  TEAM: 'team',
+  SERVER: 'server',
+  ALL: 'all'
+};
 
 
 var game,
+    chat,
     layerBackground,
     layerPlayers,
     layerForeground,
@@ -11,7 +17,6 @@ var game,
     PLAYERS = {},
     
     AT_DESTINATION = false,
-    
     
     Config = window.Config;
 
@@ -22,6 +27,11 @@ function start() {
     'height': 1080,
     'onBeforeUpdate': onBeforeUpdate,
     'onAfterDraw': onAfterDraw
+  });
+  
+  chat = new window.Chat({
+    'el': document.querySelector('.chat'),
+    'types': CHAT_TYPES
   });
   
   layerBackground = new window.Layer({
@@ -71,8 +81,13 @@ var PlayerNameInput = (function() {
       
       this.setValue(options.value);
       
+      this.el.addEventListener('keydown', this.onKeyDown.bind(this));
       this.el.addEventListener('keyup', this.onInput.bind(this));
       this.el.addEventListener('blur', this.onBlur.bind(this));
+    },
+    
+    onKeyDown: function onKeyDown(e) {
+      e.stopPropagation();
     },
     
     onInput: function onInput(e) {
@@ -97,7 +112,10 @@ var PlayerNameInput = (function() {
     
     sendValue: function sendValue(name) {
       if (this.setValue(name)) {
-        playerShip.setName(this.value);
+        localStorage['playerName'] = name;
+        Server.sendPlayerMetaData({
+          'name': name
+        });
       }
     }
   };
@@ -111,21 +129,25 @@ function createStarfields() {
         'id': 'starfieldBackground',
         'numberOfItems': 100,
         'speed': [5, 15],
-        'size': [0.5, 1],
-        'color': 'rgba(255, 255, 255, .5)'
+        'speedFactor': 0,
+        'size': [0.5, 1.1],
+        'color': 'rgba(255, 255, 255, .4)'
       }),
       starfieldForeground = new Starfield({
         'id': 'starfieldForeground',
-        'numberOfItems': 50,
+        'numberOfItems': 30,
         'speed': [10, 20],
+        'speedFactor': 0,
         'size': [0.8, 1.3],
-        'color': 'rgba(255, 255, 255, .7)'
+        'color': 'rgba(255, 255, 255, .6)'
       });
       
   layerBackground.add(starfieldBackground);
   layerForeground.add(starfieldForeground);
   starfieldBackground.setSize();
   starfieldForeground.setSize();
+  
+  onReachedDestination();
 }
 
 function onPlayerReadyInServer(e) {
@@ -135,9 +157,10 @@ function onPlayerReadyInServer(e) {
     'id': data.id,
     'name': localStorage['playerName'],
     'color': localStorage['playerColor'],
-    'speed': data.speed,
-    'onMetaDataChange': onPlayerMetaDataChange
+    'speed': data.speed
   });
+  
+  onReachedDestination();
   
   createUI(data.ui);
   
@@ -146,13 +169,6 @@ function onPlayerReadyInServer(e) {
   playerShip.moveTo(game.width / 2, game.height / 2);
   
   Server.newPlayer(playerShip);
-}
-
-
-function onPlayerMetaDataChange() {
-  Server.sendPlayerMetaData();
-  localStorage['playerName'] = playerShip.name;
-  localStorage['playerColor'] = playerShip.color;
 }
 
 function createUI(data) {
@@ -177,23 +193,27 @@ function createUI(data) {
 }
 
 function onColorChange() {
-  var elColor = document.getElementById('colors'),
-      color = elColor.value;
+  var color = document.getElementById('colors').value;
   
-  playerShip.setColor(color);
+  localStorage['playerColor'] = color;
+  Server.sendPlayerMetaData({
+    'color': color
+  });
 }
 
 function onReachedDestination() {
   AT_DESTINATION = true;
-  layerPlayers.add(playerShip.sprite);
+  if (playerShip) {
+    layerPlayers.add(playerShip.sprite);
+  }
 }
 
 var TURBO_MODFIER = 2,
-    HOLD_AT_MAX_SPEED = 4,
+    HOLD_AT_MAX_SPEED = 3,
     traveled = 0,
-    travelSpeedIncrement = 0.2,
-    travelSpeedDecrement = 0.8,
-    travelSpeed = 80,
+    travelSpeedIncrement = 0.25,
+    travelSpeedDecrement = 0.9,
+    travelSpeed = 100,
     currentTravelSpeed = 0;
 
 function onBeforeUpdate(dt) {
@@ -268,6 +288,78 @@ function onAfterDraw() {
   }
 }
 
+var Players = (function Players() {
+  function Players() {
+    this.players = {};
+  }
+  
+  Players.prototype = {
+    tick: function tick(data) {
+      var players = data.players || {},
+          player,
+          metaData, tickData,
+          isPlayer = false;
+      
+      for (var id in players) {
+        isPlayer = !isPlayer && id === playerShip.id;
+        player = isPlayer? playerShip : this.players[id];
+
+        metaData = players[id].meta;
+        tickData = players[id].tick;
+        
+        // First try an update meta data if that exists
+        // Needs to be BEFORE the tick data, since for new users
+        // We first create the user here
+        if (metaData) {
+          this.fromMetaData(id, metaData);
+        }
+        
+        // In acse the player was created just now in fromMetaData
+        if (!player) {
+          player = this.players[id];
+        }
+        
+        if (!isPlayer && player && tickData) {
+          player.fromTickData(tickData);
+        }
+      }
+      
+      for (var id in this.players) {
+        if (!players[id]) {
+          layerPlayers.remove(this.players[id].sprite);
+          delete this.players[id];
+        }
+      }
+    },
+    
+    update: function update(players) {
+      for (var id in players) {
+        if (id === playerShip.id) {
+          continue;
+        }
+        
+        this.fromMetaData(id, players[id]);
+      }
+      
+      console.log('done creating players: ', this.players)
+    },
+    
+    fromMetaData: function fromMetaData(id, data) {
+      var player = id === playerShip.id? playerShip : this.players[id],
+          meta = data.meta || data,
+          tick = data.tick || data;
+      
+      if (!player) {
+        player = this.players[id] = new window.Ship();
+        layerPlayers.add(player.sprite);
+      }
+      
+      player.fromMetaData(meta);
+    }
+  };
+  
+  return new Players();
+}());
 
 
 var Server = (function() {
@@ -279,17 +371,27 @@ var Server = (function() {
     init: function init() {
       this.socket = window.io.connect();
       
-      this.socket.on('tick', this.onServerTick.bind(this));
-      this.socket.on('updatePlayers', this.onUpdatePlayers.bind(this));
-      this.socket.on('removePlayer', this.onRemovePlayer.bind(this));
+      this.socket.on('tick', Players.tick.bind(Players));
+      this.socket.on('updatePlayers', Players.update.bind(Players));
+      
       this.socket.on('addPlayer', this.onAddPlayer.bind(this));
       this.socket.on('ready', this.onPlayerReadyInServer.bind(this));
       this.socket.on('updateMetaData', this.onUpdatePlayerMetaData.bind(this));
+      
+      this.socket.on('joinGame', this.onJoinedGame.bind(this));
+      
+      this.socket.on('chatAddWindow', chat.addWindow.bind(chat));
+      this.socket.on('chatNewMessage', chat.addMessage.bind(chat));
+    },
+    
+    onJoinedGame: function onJoinedGame(data) {
+      console.info('Joined game: ' + data.id, data.players);
+      Players.update(data.players);
     },
 
-    sendPlayerMetaData: function sendPlayerMetaData() {
-      console.info('[Server.emit] Send player meta data', playerShip.toMetaData());
-      this.socket.emit('updateMetaData', playerShip.toMetaData());
+    sendPlayerMetaData: function sendPlayerMetaData(meta) {
+      console.info('[Server.emit] Send player meta data', meta);
+      this.socket.emit('updateMetaData', meta);
     },
     
     sendPlayerTickData: function sendPlayerTickData() {
@@ -297,15 +399,7 @@ var Server = (function() {
     },
     
     onUpdatePlayerMetaData: function nonUpdatePlayerMetaData(data) {
-      var playerId = data.id,
-          playerMetaData = data.meta,
-          player = PLAYERS[playerId];
-      
-      if (!player) {
-        return;
-      }
-      
-      player.fromMetaData(playerMetaData);
+      Players.fromMetaData(data.id, data.meta);
     },
     
     onPlayerReadyInServer: function onPlayerReadyInServer(data) {
@@ -320,56 +414,8 @@ var Server = (function() {
       this.socket.emit('newPlayer', player.toMetaData());
     },
     
-    onRemovePlayer: function onRemovePlayer(playerId) {
-      
-      var player = PLAYERS[playerId];
-      if (player) {
-        console.info('[Server.on]: Removing player', playerId);
-        layerPlayers.remove(player.sprite);
-        delete PLAYERS[playerId];
-      } else {
-        console.warn('[Server.on]: Trying to remove non existent player! ', playerId);
-      }
-    },
-    
     onAddPlayer: function onAddPlayer(playerData) {
       console.info('[Server.on] Player added', playerData);
-    },
-    
-    onUpdatePlayers: function onUpdatePlayers(players) {
-      var player;
-      
-      for (var id in players) {
-        if (id === playerShip.id) {
-          continue;
-        }
-        
-        player = players[id];
-        
-        if (PLAYERS[id]) {
-          PLAYERS[id].fromMetaData(player);
-        } else {
-          PLAYERS[id] = new Ship(player);
-          layerPlayers.add(PLAYERS[id].sprite);
-        }
-      }
-      
-      console.log('done creating players: ', PLAYERS)
-    },
-    
-    onServerTick: function onServerTick(data) {
-      var players = data.players || {},
-          player;
-      
-      for (var id in players) {
-        player = players[id];
-
-        if (id === playerShip.id) {
-          playerShip.updateFromServer(player);
-        } else if (PLAYERS[id]) {
-          PLAYERS[id].fromTickData(player);
-        }
-      }
     }
   };
   

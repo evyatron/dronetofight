@@ -5,8 +5,6 @@ var Ship = (function() {
     this.sprite = null;
     this.speed = 0;
     this.color = '';
-    
-    this.onMetaDataChange;
 
     this.init(options);
   }
@@ -16,38 +14,37 @@ var Ship = (function() {
       !options && (options = {});
 
       this.id = options.id || ('ship_' + Date.now());
-      this.name = options.name || ('Player_' + window.utils.random(1, 1000));
       this.speed = options.speed || 0;
-      this.color = options.color || window.utils.random(['red', 'blue', 'green']);
-      
-      this.onMetaDataChange = options.onMetaDataChange || function(){};
 
       this.sprite = new window.Sprite({
         'id': 'sprite_' + this.id,
         'type': window.SPRITE_TYPES.SHIP,
         'width': 50,
-        'height': 50,
-        'color': this.color
+        'height': 50
       });
       
       this.elName = document.createElement('span');
       this.elName.className = 'name';
-      this.elName.innerHTML = this.name;
+      
+      this.fromMetaData({
+        'name': options.name || ('Player_' + window.utils.random(1, 1000)),
+        'color': options.color || window.utils.random(['red', 'blue', 'green'])
+      });
+
       this.sprite.el.appendChild(this.elName);
     },
     
     setName: function setName(name) {
-      if (name !== this.name) {
-        this.elName.innerHTML = this.name = name;
-        this.onMetaDataChange();
+      if (name && name !== this.name) {
+        this.name = name;
+        this.elName.innerHTML = this.name.replace(/</g, '&lt;');
       }
     },
     
     setColor: function setColor(color) {
-      if (color !== this.color) {
+      if (color && color !== this.color) {
         this.color = color;
         this.sprite.setColor(color);
-        this.onMetaDataChange();
       }
     },
 
@@ -72,9 +69,12 @@ var Ship = (function() {
     },
     
     fromMetaData: function fromMetaData(data) {
-      this.id = data.id;
-      this.name = this.elName.innerHTML = data.name;
-      this.color = this.sprite.color = data.color;
+      if (data.id) {
+        this.id = data.id;
+      }
+      
+      this.setName(data.name);
+      this.setColor(data.color);
     },
     
     fromTickData: function fromTickData(data) {
@@ -83,7 +83,7 @@ var Ship = (function() {
       this.sprite.angle = data.angle;
     },
     
-    updateFromServer: function updateFromServer(data) {
+    fromServer: function fromServer(data) {
       
     }
   };

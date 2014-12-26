@@ -7,13 +7,12 @@ function Starfield(options) {
       items = [],
       width = 0,
       height = 0,
-      speedFactor = options.speedFactor || 1,
+      speedFactor = 1,
       color = options.color || 'rgba(255, 255, 255, 1)',
       SIZE_MIN = (options.size || [0.5, 1])[0],
       SIZE_MAX = (options.size || [0.5, 1])[1],
       SPEED_MIN = (options.speed || [20, 1])[0],
       SPEED_MAX = (options.speed || [20, 100])[1];
-      
       
   this.id = options.id || ('starfield_' + Date.now());
 		
@@ -22,6 +21,7 @@ function Starfield(options) {
 		context = elCanvas.getContext('2d');
 
 		self.setNumberOfItems(options.numberOfItems);
+		self.setSpeedFactor(options.speedFactor);
 	};
 	
 	this.setNumberOfItems = function(newNumber) {
@@ -81,9 +81,8 @@ function Starfield(options) {
 	  
 		for (var i = 0, item; (item = items[i++]);) {
 			item.x -= item.speed * speedFactor * dt;
-			//item.y += vectorY * item.speed * speedFactor * dt;
 
-			if (item.x < 0 || item.x > width || item.y < 0 || item.y > height) {
+			if (item.x < 0) {
 				items.splice(i-1, 1);
 			}
 		}
