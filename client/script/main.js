@@ -11,10 +11,10 @@ var CHAT_TYPES = {
 var game,
     chat,
     layerBackground,
+    layerProjectiles,
     layerPlayers,
     layerForeground,
-    playerShip,
-    PLAYERS = {},
+    PLAYER,
     
     AT_DESTINATION = false,
     
@@ -40,6 +40,12 @@ function start() {
   });
   game.addLayer(layerBackground);
   
+  layerProjectiles = new window.Layer({
+    'id': 'projectiles',
+    'zIndex': 20
+  });
+  game.addLayer(layerProjectiles);
+
   layerPlayers = new window.Layer({
     'id': 'players',
     'zIndex': 50
@@ -62,9 +68,6 @@ function start() {
   PlayerNameInput.init({
     'el': document.getElementById('playername')
   });
-  
-  
-  window.addEventListener('PlayerReadyInServer', onPlayerReadyInServer);
   
   Server.init();
 }
@@ -150,61 +153,74 @@ function createStarfields() {
   onReachedDestination();
 }
 
-function onPlayerReadyInServer(e) {
-  var data = e.detail || {};
+function onPlayerReadyInServer(data) {
+  console.info('[Server.on] Player ready in server', data);
   
-  playerShip = new window.Ship({
+  // Create player ship
+  PLAYER = new window.Ship({
     'id': data.id,
-    'name': localStorage['playerName'],
-    'color': localStorage['playerColor'],
-    'speed': data.speed
+    'speed': data.speed,
+    'maxSpeed': data.maxSpeed,
+    'zIndex': 100,
+    'isPlayer': true
   });
+  
+  PLAYER.fromMetaData({
+    'name': localStorage['playerName'] || ('Player_' + window.utils.random(1, 1000)),
+    'shipId': localStorage['playerShip'] || 1
+  });
+  
+  for (var skillId in data.skills) {
+    var skillData = data.skills[skillId];
+    skillData.elContainer = document.getElementById('skills');
+    PLAYER.addSkill(new window.Skill(skillData));
+  }
   
   onReachedDestination();
   
   createUI(data.ui);
   
-  PlayerNameInput.setValue(playerShip.name);
+  PlayerNameInput.setValue(PLAYER.meta.name);
   
-  playerShip.moveTo(game.width / 2, game.height / 2);
+  PLAYER.moveTo(game.width / 2, game.height / 2);
   
-  Server.newPlayer(playerShip);
+  Server.newPlayer(PLAYER);
 }
 
 function createUI(data) {
-  var elColor = document.getElementById('colors'),
-      colors = data.colors || [],
+  var el = document.getElementById('ships'),
+      items = data.ships || [],
       html = '';
 
-  for (var i = 0, color; (color = colors[i++]);) {
-    html += '<option value="' + color.color + '" style="background-color: ' + color.color + ';">' +
-              color.name +
-            '</option>';
+  for (var i = 0, item; (item = items[i++]);) {
+    html += '<option value="' + item.id + '">' + item.name + '</option>';
   }
   
-  elColor.addEventListener('change', onColorChange);
+  el.addEventListener('change', onShipChange);
   
-  elColor.innerHTML = html;
+  el.innerHTML = html;
   
-  var elSelectedColor = elColor.querySelector('option[value = "' + playerShip.color + '"]');
-  if (elSelectedColor) {
-    elSelectedColor.selected = true;
+  var elSelected = el.querySelector('option[value = "' + PLAYER.meta.shipId + '"]');
+  if (elSelected) {
+    elSelected.selected = true;
   }
 }
 
-function onColorChange() {
-  var color = document.getElementById('colors').value;
+function onShipChange() {
+  var shipId = document.getElementById('ships').value;
   
-  localStorage['playerColor'] = color;
+  localStorage['playerShip'] = shipId;
   Server.sendPlayerMetaData({
-    'color': color
+    'shipId': shipId
   });
+  
+  document.getElementById('ships').blur();
 }
 
 function onReachedDestination() {
   AT_DESTINATION = true;
-  if (playerShip) {
-    layerPlayers.add(playerShip.sprite);
+  if (PLAYER) {
+    layerPlayers.add(PLAYER.sprite);
   }
 }
 
@@ -247,27 +263,60 @@ function onBeforeUpdate(dt) {
       }
     }
   }
+  
+  if (PLAYER) {
+    PLAYER.update(dt);
+  }
 }
 
 function handlePlayerInput(dt) {
-  if (!playerShip) {
+  if (!PLAYER) {
     return;
   }
 
-  var input = game.Input;
+  var input = game.Input,
+      playerSprite = PLAYER.sprite,
+      speed = PLAYER.speed,
+      distanceFromShipToInput = playerSprite.position.distance(input.position);
 
-  // Rotate the player to look at the cursor
-  playerShip.sprite.lookAt(input.position);
-
-  var speed = playerShip.speed,
-      playerSprite = playerShip.sprite;
       
+  // Rotate the player's ship to look at the cursor
+  playerSprite.lookAt(input.position);
+
+
   // Is turbo key down
   if (input.isKeyDown(Config.KEY_BINDINGS.TURBO)) {
     speed *= TURBO_MODFIER;
   }
 
   // Movement
+  if (input.isKeyDown(Config.KEY_BINDINGS.RIGHT)) {
+    playerSprite.applyForce(playerSprite.CLOCKWISE.scale(speed));
+  }
+  if (input.isKeyDown(Config.KEY_BINDINGS.LEFT)) {
+    playerSprite.applyForce(playerSprite.CCLOCKWISE.scale(speed));
+  }
+
+  if (distanceFromShipToInput > 100) {
+    if (input.isKeyDown(Config.KEY_BINDINGS.UP)) {
+      playerSprite.applyForce(playerSprite.FORWARDS.scale(speed));
+    }
+    if (input.isKeyDown(Config.KEY_BINDINGS.DOWN)) {
+      playerSprite.applyForce(playerSprite.BACKWARDS.scale(speed));
+    }
+  }
+  
+  var skill;
+  for (var skillId in PLAYER.skills) {
+    skill = PLAYER.skills[skillId];
+    if (skill.isReady && input.isKeyDown(skill.key)) {
+      Server.useSkill(skillId);
+    }
+  }
+
+
+
+  /*
   if (input.isKeyDown(Config.KEY_BINDINGS.RIGHT)) {
     playerSprite.applyForce(new window.Vector(speed, 0));
   }
@@ -280,13 +329,65 @@ function handlePlayerInput(dt) {
   if (input.isKeyDown(Config.KEY_BINDINGS.DOWN)) {
     playerSprite.applyForce(new window.Vector(0, speed));
   }
+  */
 }
 
 function onAfterDraw() {
-  if (playerShip) {
+  if (PLAYER) {
     Server.sendPlayerTickData();
   }
 }
+
+function serverTick(data) {
+  var players = data.players,
+      ownData = data.playerData;
+
+  // Update the own player
+  PLAYER.fromServer(ownData);
+  
+  // Update all other players in the game
+  Players.tick(players);
+}
+
+var Projectiles = (function Projectiles() {
+  function Projectiles() {
+    this.projectiles = {};
+  }
+  
+  Projectiles.prototype = {
+    update: function update(dt) {
+      for (var id in this.projectiles) {
+        this.projectiles[id].update(dt);
+      }
+    },
+    
+    add: function add(data) {
+      if (this.projectiles[data.id]) {
+        return;
+      }
+      
+      this.projectiles[data.id] = new window.Sprite(data);
+      
+      layerProjectiles.add(this.projectiles[data.id]);
+      
+      console.log('Create new projectile', data);
+    },
+    
+    remove: function remove(data) {
+      if (!this.projectiles[data.id]) {
+        return;
+      }
+      
+      console.log('Remove projectile', data);
+      
+      layerProjectiles.remove(this.projectiles[data.id]);
+      
+      delete this.projectiles[data.id];
+    }
+  };
+  
+  return new Projectiles();
+}());
 
 var Players = (function Players() {
   function Players() {
@@ -294,15 +395,14 @@ var Players = (function Players() {
   }
   
   Players.prototype = {
-    tick: function tick(data) {
-      var players = data.players || {},
-          player,
+    tick: function tick(players) {
+      var player,
           metaData, tickData,
           isPlayer = false;
       
       for (var id in players) {
-        isPlayer = !isPlayer && id === playerShip.id;
-        player = isPlayer? playerShip : this.players[id];
+        isPlayer = !isPlayer && id === PLAYER.id;
+        player = isPlayer? PLAYER : this.players[id];
 
         metaData = players[id].meta;
         tickData = players[id].tick;
@@ -313,8 +413,8 @@ var Players = (function Players() {
         if (metaData) {
           this.fromMetaData(id, metaData);
         }
-        
-        // In acse the player was created just now in fromMetaData
+
+        // In case the player was created just now in fromMetaData
         if (!player) {
           player = this.players[id];
         }
@@ -324,6 +424,8 @@ var Players = (function Players() {
         }
       }
       
+      // If we have a player that WASN'T sent in the server tick
+      // It means they were disconnected - so let's remove them
       for (var id in this.players) {
         if (!players[id]) {
           layerPlayers.remove(this.players[id].sprite);
@@ -334,23 +436,23 @@ var Players = (function Players() {
     
     update: function update(players) {
       for (var id in players) {
-        if (id === playerShip.id) {
-          continue;
-        }
-        
         this.fromMetaData(id, players[id]);
       }
       
-      console.log('done creating players: ', this.players)
+      for (var id in this.players) {
+        this.players[id].update_team();
+      }
+      
+      console.log('done creating players: ', players);
     },
     
     fromMetaData: function fromMetaData(id, data) {
-      var player = id === playerShip.id? playerShip : this.players[id],
-          meta = data.meta || data,
-          tick = data.tick || data;
+      var isOwnPlayer = id === PLAYER.id,
+          player = isOwnPlayer? PLAYER : this.players[id],
+          meta = data.meta || data;
       
-      if (!player) {
-        player = this.players[id] = new window.Ship();
+      if (!player && !isOwnPlayer) {
+        player = this.players[id] = new window.Ship(meta);
         layerPlayers.add(player.sprite);
       }
       
@@ -371,12 +473,15 @@ var Server = (function() {
     init: function init() {
       this.socket = window.io.connect();
       
-      this.socket.on('tick', Players.tick.bind(Players));
+      this.socket.on('tick', serverTick);
       this.socket.on('updatePlayers', Players.update.bind(Players));
       
       this.socket.on('addPlayer', this.onAddPlayer.bind(this));
-      this.socket.on('ready', this.onPlayerReadyInServer.bind(this));
+      this.socket.on('ready', onPlayerReadyInServer);
       this.socket.on('updateMetaData', this.onUpdatePlayerMetaData.bind(this));
+      
+      this.socket.on('projectileAdd', Projectiles.add.bind(Projectiles));
+      this.socket.on('projectileRemove', Projectiles.remove.bind(Projectiles));
       
       this.socket.on('joinGame', this.onJoinedGame.bind(this));
       
@@ -385,8 +490,9 @@ var Server = (function() {
     },
     
     onJoinedGame: function onJoinedGame(data) {
-      console.info('Joined game: ' + data.id, data.players);
+      console.info('Joined game', data);
       Players.update(data.players);
+      document.getElementById('team').innerHTML = data.team;
     },
 
     sendPlayerMetaData: function sendPlayerMetaData(meta) {
@@ -395,20 +501,17 @@ var Server = (function() {
     },
     
     sendPlayerTickData: function sendPlayerTickData() {
-      this.socket.emit('updateTickData', playerShip.toTickData());
+      this.socket.emit('updateTickData', PLAYER.toTickData());
+    },
+    
+    useSkill: function useSkill(id) {
+      this.socket.emit('useSkill', id);
     },
     
     onUpdatePlayerMetaData: function nonUpdatePlayerMetaData(data) {
       Players.fromMetaData(data.id, data.meta);
     },
-    
-    onPlayerReadyInServer: function onPlayerReadyInServer(data) {
-      console.info('[Server.on] Player ready in server', data);
-      window.dispatchEvent(new CustomEvent('PlayerReadyInServer', {
-        'detail': data
-      }));
-    },
-    
+
     newPlayer: function newPlayer(player) {
       console.info('[Server.emit] New player', player);
       this.socket.emit('newPlayer', player.toMetaData());

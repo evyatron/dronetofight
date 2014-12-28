@@ -13,6 +13,7 @@
     <script src="script/Layer.js"></script>
     <script src="script/Ship.js"></script>
     <script src="script/Sprite.js"></script>
+    <script src="script/Skill.js"></script>
     <script src="script/Chat.js"></script>
     <script src="script/Starfield.js"></script>
   </head>
@@ -23,11 +24,20 @@
         <span>Name:</span>
         <input type="text" value="" id="playername" name="playername" placeholder="Enter name" />
       </label>
-      <label for="color">
-        <span>Color:</span>
-        <select id="colors" name="colors"></select>
+      
+      <label for="ship">
+        <span>Ship:</span>
+        <select id="ships" name="ships"></select>
+      </label>
+      
+      <label for="team">
+        <span>Team:</span>
+        <b id="team"></b>
       </label>
     </div>
+    
+    <ul id="skills"></ul>
+    
     <div class="chat"></div>
 
     <script src="script/main.js"></script>

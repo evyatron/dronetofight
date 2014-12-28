@@ -146,10 +146,15 @@ var Input = (function() {
     this._y = 0;
     this.offsetX = 0;
     this.offsetY = 0;
+    this.width = 0;
+    this.height = 0;
     this.ratio = 1;
 
     this.keysDown = {};
     this.position = new Vector();
+    
+    this.KEY_LMB = 0;
+    this.KEY_RMB = 0;
 
     this.init(options);
   }
@@ -163,9 +168,18 @@ var Input = (function() {
 
       window.addEventListener('resize', this.resize.bind(this));
 
-      this.el.addEventListener('mousemove', this.updatePosition.bind(this));
+      this.el.addEventListener('mousedown', this.onMouseDown.bind(this));
+      window.addEventListener('mouseup', this.onMouseUp.bind(this));
+      window.addEventListener('mousemove', this.updatePosition.bind(this));
+      
       window.addEventListener('keydown', this.onKeyDown.bind(this));
       window.addEventListener('keyup', this.onKeyUp.bind(this));
+      
+      utils.preventEvent(window, 'contextmenu');
+      utils.preventEvent(window, 'selectstart');
+      
+      this.KEY_LMB = window.Config.KEYS.LMB;
+      this.KEY_RMB = window.Config.KEYS.RMB;
 
       this.resize();
     },
@@ -174,6 +188,8 @@ var Input = (function() {
       var bounds = this.el.getBoundingClientRect();
       this.offsetX = bounds.left;
       this.offsetY = bounds.top;
+      this.width = bounds.width;
+      this.height = bounds.height;
 
       this.updatePosition();
     },
@@ -216,6 +232,22 @@ var Input = (function() {
     // @e (KeyUpEvent)
     onKeyUp: function onKeyUp(e) {
       this.keysDown[e.which || e.keyCode] = false;
+    },
+    
+    onMouseDown: function onMouseDown(e) {
+      if (e.button === 0) {
+        this.keysDown[this.KEY_LMB] = true;
+      } else if (e.button === 2) {
+        this.keysDown[this.KEY_RMB] = true;
+      }
+    },
+    
+    onMouseUp: function onMouseUp(e) {
+      if (e.button === 0) {
+        this.keysDown[this.KEY_LMB] = false;
+      } else if (e.button === 2) {
+        this.keysDown[this.KEY_RMB] = false;
+      }
     }
   };
 

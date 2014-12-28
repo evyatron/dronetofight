@@ -5,7 +5,8 @@ var Sprite = (function() {
     this.id = '';
     this.type = '';
     this.src = '';
-    this.zIndex;
+    this.zIndex = 0;
+    this.maxSpeed = 0;
     this.color = '';
 
     this.width = 0;
@@ -14,12 +15,17 @@ var Sprite = (function() {
     this.mass = 1;
     this.drag = 0.9;
 
-    this.forces = new Vector(0, 0);
     this.velocity = new Vector(0, 0);
     this.acceleration = new Vector(0, 0);
 
     this.position = new Vector(0, 0);
     this.angle = 0;
+    
+    this.FORWARDS = new Vector(0, 0);
+    this.BACKWARDS = new Vector(0, 0);
+    this.CLOCKWISE = new Vector(0, 0);
+    this.CCLOCKWISE = new Vector(0, 0);
+    
 
     this.init(options);
   }
@@ -30,9 +36,20 @@ var Sprite = (function() {
 
       this.id = options.id || ('sprite_' + Date.now());
       this.type = options.type || '';
-      this.src = options.src || '';
+      this.src = options.image || '';
       this.zIndex = options.zIndex || 0;
-      this.color = options.color || 'transparent';
+      this.maxSpeed = options.maxSpeed || Infinity;
+      this.drag = options.drag || 0.9;
+      this.angle = options.angle || 0;
+      this.color = options.color || '';
+      
+      if ('x' in options && 'y' in options) {
+        this.position = new Vector(options.x, options.y);
+      }
+      
+      if ('velocity' in options) {
+        this.velocity = new Vector(options.velocity);
+      }
 
       this.create();
 
@@ -40,15 +57,14 @@ var Sprite = (function() {
     },
 
     update: function update(dt) {
-      var newVelocity = new Vector(this.velocity).scale(this.drag);
-      newVelocity.add(this.acceleration.scale(dt));
-      this.velocity = newVelocity;
+      this.velocity.add(this.acceleration);
+      
+      this.position.add(this.velocity.scale(dt));
+      
+      this.velocity = this.velocity.scale(this.drag);
+      this.velocity.clamp(this.maxSpeed);
 
-      //.rotate(this.angle)
-
-      this.position.add(this.velocity);
-
-      this.acceleration.scale(0);
+      this.acceleration.reset();
     },
 
     draw: function draw() {
@@ -67,6 +83,11 @@ var Sprite = (function() {
 
     lookAt: function lookAt(target) {
       this.angle = this.position.angle(target);
+      
+      this.FORWARDS = new window.Vector(1, 0).rotate(this.angle);
+      this.BACKWARDS = new window.Vector(-1, 0).rotate(this.angle);
+      this.CLOCKWISE = new window.Vector(1, 1).rotate(this.angle);
+      this.CCLOCKWISE = new window.Vector(1, -1).rotate(this.angle);
     },
 
     setSize: function setSize(width, height) {
@@ -75,9 +96,14 @@ var Sprite = (function() {
 
       this.el.style.cssText += 'width: ' + width + 'px; height: ' + height + 'px;';
     },
-    
-    setColor: function setColor(color) {
-      this.elContent.style.backgroundColor= this.color = color;
+
+    setImage: function setImage(src) {
+      var img = new Image();
+      img.onload = function onSpriteImageLoad(img) {
+        this.elContent.style.backgroundImage = 'url(' + img.src + ')';
+        this.setSize(img.width, img.height);
+      }.bind(this, img);
+      img.src = src;
     },
 
     create: function create() {
@@ -91,15 +117,10 @@ var Sprite = (function() {
       this.elContent = this.el.querySelector('.content');
       
       if (this.src) {
-        this.el.style.backgroundImage = this.src;
-        var img = new Image();
-        img.onload = function onSpriteImageLoad(img) {
-          this.setSize(img.width, img.height);
-        }.bind(this, img);
-        img.src = this.src;
+        this.setImage(this.src);
       }
       if (this.color) {
-        this.elContent.style.backgroundColor  = this.color;
+        this.elContent.style.backgroundColor = this.color;
       }
     }
   };

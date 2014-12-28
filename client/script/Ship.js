@@ -1,10 +1,14 @@
 var Ship = (function() {
   function Ship(options) {
     this.id = '';
-    this.name = '';
     this.sprite = null;
-    this.speed = 0;
-    this.color = '';
+    
+    this.speed;
+    
+    this.meta = {};
+    this.skills = {};
+    
+    this.isPlayer = false;
 
     this.init(options);
   }
@@ -13,38 +17,64 @@ var Ship = (function() {
     init: function init(options) {
       !options && (options = {});
 
-      this.id = options.id || ('ship_' + Date.now());
-      this.speed = options.speed || 0;
+      if (!options.id) {
+        throw new Error('No ship id provided!', options);
+      }
+
+      this.id = options.id;
+      this.speed = options.speed;
+      this.isPlayer = Boolean(options.isPlayer);
 
       this.sprite = new window.Sprite({
         'id': 'sprite_' + this.id,
         'type': window.SPRITE_TYPES.SHIP,
         'width': 50,
-        'height': 50
+        'height': 50,
+        'maxSpeed': options.maxSpeed,
+        'zIndex': options.zIndex
       });
-      
+
       this.elName = document.createElement('span');
       this.elName.className = 'name';
-      
-      this.fromMetaData({
-        'name': options.name || ('Player_' + window.utils.random(1, 1000)),
-        'color': options.color || window.utils.random(['red', 'blue', 'green'])
-      });
 
       this.sprite.el.appendChild(this.elName);
     },
     
-    setName: function setName(name) {
-      if (name && name !== this.name) {
-        this.name = name;
-        this.elName.innerHTML = this.name.replace(/</g, '&lt;');
+    addSkill: function addSkill(skill) {
+      if (this.skills[skill.id]) {
+        return;
       }
+      
+      this.skills[skill.id] = skill;
     },
     
-    setColor: function setColor(color) {
-      if (color && color !== this.color) {
-        this.color = color;
-        this.sprite.setColor(color);
+    update_name: function update_name() {
+      this.elName.innerHTML = this.meta.name.replace(/</g, '&lt;');
+    },
+
+    update_shipId: function update_shipId() {
+      this.sprite.setImage('/images/ships/' + this.meta.shipId + '.png');
+    },
+    
+    update: function update(dt) {
+      for (var skillId in this.skills) {
+        this.skills[skillId].update(dt);
+      }
+    },
+
+    update_team: function update_team() {
+      var classList = this.sprite.el.classList;
+
+      if (this.isPlayer) {
+        classList.add('self');
+      } else {
+        if (window.PLAYER.meta.team === this.meta.team) {
+          classList.add('ally');
+          classList.remove('enemy');
+        } else {
+          classList.add('enemy');
+          classList.remove('ally');
+        }
       }
     },
 
@@ -54,27 +84,32 @@ var Ship = (function() {
     },
     
     toMetaData: function toMetaData() {
-      return {
-        'name': this.name,
-        'color': this.color
-      };
+      return this.meta;
     },
     
     toTickData: function toTickData() {
+      var sprite = this.sprite;
+      
       return {
-        'x': this.sprite.position.x,
-        'y': this.sprite.position.y,
-        'angle': this.sprite.angle
+        'x': sprite.position.x,
+        'y': sprite.position.y,
+        'angle': sprite.angle,
+        'velocity': sprite.velocity.toTickData()
       };
     },
     
     fromMetaData: function fromMetaData(data) {
-      if (data.id) {
-        this.id = data.id;
+      for (var k in data) {
+        if (this.meta[k] === data[k]) {
+          continue;
+        }
+
+        this.meta[k] = data[k];
+        
+        if (this['update_' + k]) {
+          this['update_' + k]();
+        }
       }
-      
-      this.setName(data.name);
-      this.setColor(data.color);
     },
     
     fromTickData: function fromTickData(data) {
@@ -84,7 +119,12 @@ var Ship = (function() {
     },
     
     fromServer: function fromServer(data) {
-      
+      var skills = data.skills || {};
+      for (var id in skills) {
+        if (this.skills[id]) {
+          this.skills[id].fromServer(skills[id]);
+        }
+      }
     }
   };
 

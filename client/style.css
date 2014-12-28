@@ -71,6 +71,11 @@ body {
     margin-top: 20px;
   }
 
+.sprite.enemy .name {
+  color: #d00;
+}
+
+
 #ui {
   position: absolute;
   top: 0;
@@ -94,6 +99,67 @@ body {
     #ui option {
       padding: 6px;
       font-size: 1.5em;
+    }
+
+#skills {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 200px;
+  margin-left: -100px;
+  margin-bottom: 20px;
+  font-size: 0;
+  text-align: center;
+}
+  #skills li {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    margin: 0 10px;
+    text-align: center;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .7);
+    background: rgba(255, 255, 255, .2);
+  }
+  #skills li.ready {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 1);
+  }
+  #skills li .name {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    font-size: 15px;
+  }
+  #skills li .cooldown {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    overflow: hidden;
+  }
+    #skills li .cooldown > * {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+    #skills li .cooldown span {
+      z-index: 10;
+      font-size: 12px;
+    }
+    #skills li.ready .cooldown span {
+      display: none;
+    }
+    #skills li .cooldown b {
+      z-index: 5;
+      background: rgba(255, 255, 255, .3);
     }
 
 .chat {
@@ -120,25 +186,23 @@ body {
       bottom: 100%;
       left: 10px;
       width: 80px;
-      height: 27px;
-      line-height: 25px;
+      height: 26px;
+      line-height: 24px;
       margin-bottom: -1px;
       padding: 0 4px;
-      border: 1px solid #aaa;
-      color: #aaa;
+      border: 1px solid #fff;
+      color: #fff;
       z-index: 10;
       border-radius: 1px 1px 0 0;
       cursor: pointer;
     }
     .chat .window .name:hover {
-      background: rgba(255, 255, 255, .5);
+      background: rgba(255, 255, 255, 1);
       color: #000;
     }
     .chat .window.active .name {
       height: 30px;
       line-height: 28px;
-      color: #fff;
-      border: 1px solid #fff;
       background: rgba(0, 0, 0, .5);
       border-bottom-color: #000;
       pointer-events: none;

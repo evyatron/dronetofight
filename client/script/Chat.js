@@ -80,6 +80,8 @@ var Chat = (function() {
     },
     
     addMessage: function addMessage(data) {
+      console.info('[Chat] Add message', data);
+      
       var windowId = data.windowId,
           player = data.player,
           message = data.message,

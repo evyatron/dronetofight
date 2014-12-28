@@ -2,6 +2,8 @@ var Config = {};
 
 // Helper key codes
 Config.KEYS = {
+  LMB: -1,
+  RMB: -2,
   CTRL: 17,
   CTRLRIGHT: 18,
   CTRLR: 18,

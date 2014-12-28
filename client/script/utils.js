@@ -4,6 +4,13 @@ var utils = (function(){
   }
   
   utils.prototype = {
+    preventEvent: function preventEvent(el, eventName) {
+      el.addEventListener(eventName, this._onPreventEvent);
+    },
+    _onPreventEvent: function _onPreventEvent(e) {
+      e.preventDefault();
+    },
+    
     // Random method with min and max limits
     random: function random(min, max) {
       if (Array.isArray(min) && max === undefined) {
@@ -21,7 +28,7 @@ var utils = (function(){
 
 // A simple template formatting method
 // Replaces {{propertyName}} with properties from the 'args' object
-String.prototype.format = function format(args) {
+String.prototype.format = function String_format(args) {
   !args && (args = {});
 
   return this.replace(/(\{\{([^\}]+)\}\})/g, function onMatch() {
@@ -45,4 +52,9 @@ String.prototype.format = function format(args) {
 
     return value;
   });
+};
+
+// Clamp a number between min/max range
+Math.clamp = function Math_Clamp(number, min, max) {
+  return Math.min(Math.max(number, min), max);
 };
