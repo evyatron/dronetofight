@@ -14,6 +14,8 @@ var Sprite = (function() {
 
     this.mass = 1;
     this.drag = 0.9;
+    
+    this.isBoundToLayer = false;
 
     this.velocity = new Vector(0, 0);
     this.acceleration = new Vector(0, 0);
@@ -26,7 +28,8 @@ var Sprite = (function() {
     this.CLOCKWISE = new Vector(0, 0);
     this.CCLOCKWISE = new Vector(0, 0);
     
-
+    this.layer;
+    
     this.init(options);
   }
 
@@ -41,6 +44,7 @@ var Sprite = (function() {
       this.maxSpeed = options.maxSpeed || Infinity;
       this.drag = options.drag || 0.9;
       this.color = options.color || '';
+      this.isBoundToLayer = Boolean(options.isBoundToLayer);
       
       this.rotateTo(options.angle || 0);
       
@@ -66,6 +70,21 @@ var Sprite = (function() {
       this.velocity.clamp(this.maxSpeed);
 
       this.acceleration.reset();
+      
+      if (this.isBoundToLayer && this.layer) {
+        
+      var layerWidth = 1920,
+          layerHeight = 1080;
+      
+        var position = this.position,
+            x = position.x,
+            y = position.y,
+            halfWidth = this.width / 2,
+            halfHeight = this.height / 2;
+
+        position.x = Math.clamp(x, halfWidth, layerWidth - halfWidth);
+        position.y = Math.clamp(y, halfHeight, layerHeight - halfHeight);
+      }
     },
 
     draw: function draw() {
@@ -86,7 +105,7 @@ var Sprite = (function() {
       if (target) {
         this.rotateTo(this.position.angle(target));
       } else {
-        console.warn('Trying to look at nothing!');
+        console.warn('Trying to look at nothing');
       }
     },
     
@@ -94,13 +113,13 @@ var Sprite = (function() {
       if (angle) {
         this.rotateTo(this.angle + angle);
       } else {
-        console.warn('Trying to rotate by nothing!');
+        console.warn('Trying to rotate by nothing');
       }
     },
     
     rotateTo: function rotateTo(angle) {
       if (typeof angle !== 'number') {
-        console.warn('Not tryign to rotate to a number!', angle);
+        console.warn('Not trying to rotate to a number', angle);
         return;
       }
       
@@ -136,6 +155,10 @@ var Sprite = (function() {
         this.setSize(img.width, img.height);
       }.bind(this, img);
       img.src = src;
+    },
+    
+    setLayer: function setLayer(layer) {
+      this.layer = layer;
     },
 
     create: function create() {

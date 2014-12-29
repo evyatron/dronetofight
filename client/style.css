@@ -20,9 +20,10 @@ option {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #111;
+  background: #000;
   overflow: hidden;
 }
+
 
 
 
@@ -37,6 +38,30 @@ option {
   -pointer-events: none;
 }
 
+.game:before,
+.game:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 100px;
+  margin: -100px 0;
+  background: transparent
+              url(http://th04.deviantart.net/fs70/PRE/i/2013/130/f/0/asteroid_stock_3_by_fimar-d64qqfu.png)
+              0 0
+              repeat-x;
+  background-size: contain;
+}
+.game:before {
+  top: 0;
+}
+.game:after {
+  bottom: 0;
+}
+
+
+
+
 
 .sprite {
   
@@ -47,6 +72,9 @@ option {
     left: 0;
     right: 0;
     bottom: 0;
+    background-position: 50% 50%;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
   }
     .sprite .content:before {
       content: '';
@@ -196,6 +224,10 @@ option {
       background: transparent;
       border: none;
     }
+    .chat .input input::selection {
+      background: rgba(0, 255, 0, .8);
+      color: rgba(0, 0, 0, 1);
+    }
     .chat .input input:focus {
       outline: none;
     }
@@ -254,14 +286,16 @@ option {
       right: 0;
       bottom: 0;
       z-index: 5;
+      padding-bottom: 4px;
       font-size: 0.8em;
       opacity: 0;
       border: 1px solid rgba(255, 255, 255, .5);
-      background: rgba(0, 0, 0, .5);
+      background: rgba(0, 0, 0, .8);
       color: #fff;
       overflow-x: hidden;
-      overflow-y: auto;
+      overflow-y: scroll;
       pointer-events: none;
+      word-wrap: break-word;
       user-select: text;
       -webkit-user-select: text;
       -moz-user-select: text;
@@ -270,22 +304,24 @@ option {
       opacity: 1;
       pointer-events: inherit;
     }
+    .chat .window .messages::-webkit-scrollbar {
+      width: 8px;
+    }
+    .chat .window .messages::-webkit-scrollbar-track {
+      background-color: rgba(0, 255, 0, .1);
+    }
+    .chat .window .messages::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 255, 0, .2);
+    }
+ 
       .chat .window .messages > div {
-        padding: 3px;
+        padding: 3px 3px 0 3px;
+        line-height: 1.4;
       }
-      
-      .chat .window .messages span {
-        display: inline-block;
-      }
-      
       
       .chat .window .messages .header {
+        white-space: nowrap;
         margin-right: 7px;
-        /*
-        margin-right: 3px;
-        padding: 2px 4px;
-        background: rgba(255, 255, 255, .1);
-        */
       }
         .chat .window .messages .timestamp {
         }
@@ -312,6 +348,9 @@ option {
       
 .chat.focused .input,
 .chat.focused .window .name,
-.chat.focused .window .messages{
+.chat.focused .window .messages {
   border-color: rgba(255, 255, 255, 1);
+}
+.chat.focused .window .messages {
+  background: rgba(0, 0, 0, .9);
 }

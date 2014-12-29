@@ -33,7 +33,8 @@ var Ship = (function() {
         'height': 50,
         //'drag': 1,
         'maxSpeed': options.maxSpeed,
-        'zIndex': options.zIndex
+        'zIndex': options.zIndex,
+        'isBoundToLayer': true
       });
 
       this.elName = document.createElement('span');

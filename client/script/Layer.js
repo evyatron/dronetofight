@@ -37,6 +37,7 @@ var Layer = (function() {
         return;
       }
 
+      spriteToAdd.setLayer(this);
       this.spritesMap[spriteToAdd.id] = spriteToAdd;
       this.sprites.push(spriteToAdd);
       this.el.appendChild(spriteToAdd.el);
@@ -51,6 +52,7 @@ var Layer = (function() {
       
       for (var i = 0, sprite; (sprite = this.sprites[i++]);) {
         if (sprite.id === spriteToRemove.id) {
+          spriteToRemove.setLayer(null);
           spriteToRemove.el.parentNode.removeChild(spriteToRemove.el);
           this.sprites.splice(i - 1, 1);
 
@@ -69,7 +71,9 @@ var Layer = (function() {
       this.el = document.createElement('div');
       this.el.className = 'layer ' + this.id;
       this.el.style.cssText = 'z-index: ' + this.zIndex + ';' +
-                              'position: absolute; top: 0; left: 0; right: 0; bottom: 0;';
+                              'position: absolute;' +
+                              'top: 0; left: 0; right: 0; bottom: 0;' +
+                              'overflow: hidden;';
     }
   };
 

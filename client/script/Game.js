@@ -176,7 +176,7 @@ var Input = (function() {
       window.addEventListener('keyup', this.onKeyUp.bind(this));
       
       utils.preventEvent(window, 'contextmenu');
-      utils.preventEvent(window, 'selectstart');
+      utils.preventEvent(this.el, 'selectstart');
       
       this.KEY_LMB = window.Config.KEYS.LMB;
       this.KEY_RMB = window.Config.KEYS.RMB;

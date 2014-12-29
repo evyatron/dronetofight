@@ -1,7 +1,7 @@
 var Chat = (function() {
   var TEMPLATE_MESSAGE = '<span class="header">' +
                             '<span class="timestamp">[{{time}}]</span> ' +
-                            '<span class="player">{{playerName}}</span>' +
+                            '<span class="player">{{player.name}}</span>' +
                           '</span>' +
                           '<span class="message">{{message}}</span>';
   
@@ -27,7 +27,6 @@ var Chat = (function() {
       
       this.onMessage = options.onMessage || function(){};
       
-      window.addEventListener('GameInputKeyDown', this.onKeyDown.bind(this));
       window.addEventListener('GameInputKeyUp', this.onKeyUp.bind(this));
       this.elInput.addEventListener('focus', this.onFocus.bind(this));
       this.elInput.addEventListener('blur', this.onBlur.bind(this));
@@ -43,11 +42,7 @@ var Chat = (function() {
       
       this.unfocus();
     },
-    
-    onKeyDown: function onKeyDown(e) {
-      
-    },
-    
+
     onKeyUp: function onKeyUp(e) {
       var input = e.detail.input,
           key = e.detail.key;
@@ -169,15 +164,25 @@ var Chat = (function() {
         el.className = type;
       }
       
-      elWindow = elWindow.querySelector('.messages');
-      
+      var elMessages = elWindow.querySelector('.messages');
+      if (!elMessages) {
+        return;
+      }
+
       el.innerHTML = TEMPLATE_MESSAGE.format({
         'time': this.getTimestamp(),
-        'playerName': player.name,
+        'player': player,
         'message': message
       });
       
-      elWindow.appendChild(el);
+      var scrollPosition = elMessages.scrollTop + elMessages.offsetHeight,
+          shouldAutoScroll = scrollPosition >= elMessages.scrollHeight;
+
+      elMessages.appendChild(el);
+      
+      if (shouldAutoScroll) {
+        elMessages.scrollTop = Infinity;
+      }
     },
     
     getTimestamp: function getTimestamp(date) {
