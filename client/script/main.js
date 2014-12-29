@@ -15,9 +15,7 @@ var game,
     layerPlayers,
     layerForeground,
     PLAYER,
-    
-    AT_DESTINATION = false,
-    
+
     Config = window.Config;
 
 function start() {
@@ -25,13 +23,14 @@ function start() {
     'elContainer': document.querySelector('#container'),
     'width': 1920,
     'height': 1080,
-    'onBeforeUpdate': onBeforeUpdate,
+    'onBeforeUpdate': Starfields.update.bind(Starfields),
     'onAfterDraw': onAfterDraw
   });
   
   chat = new window.Chat({
     'el': document.querySelector('.chat'),
-    'types': CHAT_TYPES
+    'types': CHAT_TYPES,
+    'onMessage': Server.sendChatMessage.bind(Server)
   });
   
   layerBackground = new window.Layer({
@@ -60,9 +59,11 @@ function start() {
   
   
   
-  createStarfields();
-  
-  
+  Starfields.init({
+    'onAnimationDone': onStarfieldsAnimationDone
+  });
+  Starfields.addToLayer(Starfields.starfieldBackground, layerBackground);
+  Starfields.addToLayer(Starfields.starfieldForeground, layerForeground);
   
   
   PlayerNameInput.init({
@@ -126,33 +127,6 @@ var PlayerNameInput = (function() {
   return new PlayerNameInput();
 }())
 
-
-function createStarfields() {
-  var starfieldBackground = new Starfield({
-        'id': 'starfieldBackground',
-        'numberOfItems': 100,
-        'speed': [5, 15],
-        'speedFactor': 0,
-        'size': [0.5, 1.1],
-        'color': 'rgba(255, 255, 255, .4)'
-      }),
-      starfieldForeground = new Starfield({
-        'id': 'starfieldForeground',
-        'numberOfItems': 30,
-        'speed': [10, 20],
-        'speedFactor': 0,
-        'size': [0.8, 1.3],
-        'color': 'rgba(255, 255, 255, .6)'
-      });
-      
-  layerBackground.add(starfieldBackground);
-  layerForeground.add(starfieldForeground);
-  starfieldBackground.setSize();
-  starfieldForeground.setSize();
-  
-  onReachedDestination();
-}
-
 function onPlayerReadyInServer(data) {
   console.info('[Server.on] Player ready in server', data);
   
@@ -161,6 +135,7 @@ function onPlayerReadyInServer(data) {
     'id': data.id,
     'speed': data.speed,
     'maxSpeed': data.maxSpeed,
+    'rotationSpeed': data.rotationSpeed,
     'zIndex': 100,
     'isPlayer': true
   });
@@ -176,7 +151,9 @@ function onPlayerReadyInServer(data) {
     PLAYER.addSkill(new window.Skill(skillData));
   }
   
-  onReachedDestination();
+  // TODO: remove if we want to use the starfields animation
+  Starfields.onReachedDestination();
+  // -------
   
   createUI(data.ui);
   
@@ -217,54 +194,128 @@ function onShipChange() {
   document.getElementById('ships').blur();
 }
 
-function onReachedDestination() {
-  AT_DESTINATION = true;
+// When the starfields animations are done
+// Change the update method to the actual game (for capturing player input etc.)
+function onStarfieldsAnimationDone() {
   if (PLAYER) {
     layerPlayers.add(PLAYER.sprite);
   }
+
+  game.onBeforeUpdate = onBeforeUpdate;
 }
 
-var TURBO_MODFIER = 2,
-    HOLD_AT_MAX_SPEED = 3,
-    traveled = 0,
-    travelSpeedIncrement = 0.25,
-    travelSpeedDecrement = 0.9,
-    travelSpeed = 100,
-    currentTravelSpeed = 0;
+var Starfields = (function Starfields() {
+  function Starfields() {
+    this.starfieldBackground;
+    this.starfieldForeground;
+    
+    // Time to stay after reached maximum speed (in seconds)
+    this.timeToStayOnMaxSpeed = -1,
+    // How long have we been travelling for
+    this.timeTraveled = 0;
+    // Accceleration speed
+    this.travelSpeedIncrement = 0.25;
+    // Break speed
+    this.travelSpeedDecrement = 0.9;
+    // Maximum travel speed to reach
+    this.maxTravelSpeed = 100;
+    // Current travel speed
+    this.currentTravelSpeed = 0;
+    
+    // Callback for when the sequence is done
+    this.onAnimationDone;
+  }
+  
+  Starfields.prototype = {
+    init: function init(options) {
+      !options && (options = {});
+      
+      this.timeToStayOnMaxSpeed = options.timeToStayOnMaxSpeed || 3;
+      this.travelSpeedIncrement = options.travelSpeedIncrement || 0.25;
+      this.travelSpeedDecrement = options.travelSpeedDecrement || 0.9;
+      
+      this.onAnimationDone = options.onAnimationDone || function(){};
+      
+      this.create();
+    },
+    
+    update: function update(dt) {
+      var starfieldBackground = this.starfieldBackground,
+          starfieldForeground = this.starfieldForeground,
+          currentTravelSpeed = this.currentTravelSpeed;
 
-function onBeforeUpdate(dt) {
-  if (AT_DESTINATION) {
-    handlePlayerInput(dt);
-  } else {
-    var starfieldBackground = layerBackground.get('starfieldBackground'),
-        starfieldForeground = layerForeground.get('starfieldForeground');
-        
-    if (starfieldBackground && starfieldForeground) {
-      if (traveled < HOLD_AT_MAX_SPEED) {
-        if (currentTravelSpeed < travelSpeed) {
-          currentTravelSpeed += travelSpeedIncrement;
-          if (currentTravelSpeed > travelSpeed) {
-            currentTravelSpeed = travelSpeed;
+      if (!(starfieldBackground && starfieldForeground)) {
+        return;
+      }
+      
+      if (this.timeTraveled < this.timeToStayOnMaxSpeed) {
+        if (currentTravelSpeed < this.maxTravelSpeed) {
+          currentTravelSpeed += this.travelSpeedIncrement;
+          
+          if (currentTravelSpeed > this.maxTravelSpeed) {
+            currentTravelSpeed = this.maxTravelSpeed;
           }
+          
           starfieldBackground.setSpeedFactor(currentTravelSpeed);
           starfieldForeground.setSpeedFactor(currentTravelSpeed);
-        } else if (currentTravelSpeed === travelSpeed) {
-          traveled += dt;
+        } else {
+          if (currentTravelSpeed === this.maxTravelSpeed) {
+            this.timeTraveled += dt;
+          }
         }
       } else if (currentTravelSpeed > 0) {
-        currentTravelSpeed -= travelSpeedDecrement;
+        currentTravelSpeed -= this.travelSpeedDecrement;
+        
         if (currentTravelSpeed < 0) {
           currentTravelSpeed = 0;
-          onReachedDestination();
+          this.onReachedDestination();
         }
         
         starfieldBackground.setSpeedFactor(currentTravelSpeed);
         starfieldForeground.setSpeedFactor(currentTravelSpeed);
       }
+      
+      this.currentTravelSpeed = currentTravelSpeed;
+    },
+    
+    create: function create() {
+      this.starfieldBackground = new Starfield({
+        'id': 'starfieldBackground',
+        'numberOfItems': 100,
+        'speed': [5, 15],
+        'speedFactor': 0,
+        'size': [0.5, 1.1],
+        'color': 'rgba(255, 255, 255, .4)'
+      });
+      this.starfieldForeground = new Starfield({
+        'id': 'starfieldForeground',
+        'numberOfItems': 30,
+        'speed': [10, 20],
+        'speedFactor': 0,
+        'size': [0.8, 1.3],
+        'color': 'rgba(255, 255, 255, .6)'
+      });
+      
+      this.onReachedDestination();
+    },
+    
+    onReachedDestination: function onReachedDestination() {
+      this.onAnimationDone();
+    },
+    
+    addToLayer: function addToLayer(starfield, layer) {
+      layer.add(starfield);
+      starfield.setSize();
     }
-  }
-  
+  };
+
+  return new Starfields();
+}());
+
+// Actual game loop
+function onBeforeUpdate(dt) {
   if (PLAYER) {
+    handlePlayerInput(dt);
     PLAYER.update(dt);
   }
 }
@@ -273,39 +324,65 @@ function handlePlayerInput(dt) {
   if (!PLAYER) {
     return;
   }
+  
+  if (chat.isFocused) {
+    return;
+  }
 
   var input = game.Input,
       playerSprite = PLAYER.sprite,
       speed = PLAYER.speed,
-      distanceFromShipToInput = playerSprite.position.distance(input.position);
+      rotationSpeed = PLAYER.rotationSpeed;
 
       
-  // Rotate the player's ship to look at the cursor
-  playerSprite.lookAt(input.position);
-
 
   // Is turbo key down
   if (input.isKeyDown(Config.KEY_BINDINGS.TURBO)) {
-    speed *= TURBO_MODFIER;
+    speed *= 2;
   }
 
   // Movement
   if (input.isKeyDown(Config.KEY_BINDINGS.RIGHT)) {
-    playerSprite.applyForce(playerSprite.CLOCKWISE.scale(speed));
+    playerSprite.rotateBy(rotationSpeed * dt);
   }
   if (input.isKeyDown(Config.KEY_BINDINGS.LEFT)) {
-    playerSprite.applyForce(playerSprite.CCLOCKWISE.scale(speed));
+    playerSprite.rotateBy(-rotationSpeed * dt);
   }
-
-  if (distanceFromShipToInput > 100) {
-    if (input.isKeyDown(Config.KEY_BINDINGS.UP)) {
-      playerSprite.applyForce(playerSprite.FORWARDS.scale(speed));
-    }
-    if (input.isKeyDown(Config.KEY_BINDINGS.DOWN)) {
-      playerSprite.applyForce(playerSprite.BACKWARDS.scale(speed));
-    }
+  if (input.isKeyDown(Config.KEY_BINDINGS.UP)) {
+    playerSprite.applyForce(playerSprite.FORWARDS.scale(speed));
+  }
+  if (input.isKeyDown(Config.KEY_BINDINGS.DOWN)) {
+    playerSprite.applyForce(playerSprite.BACKWARDS.scale(speed));
   }
   
+  /*
+    Look at and move towards cursor
+  
+  // Rotate the player's ship to look at the cursor
+  playerSprite.lookAt(input.position);
+  
+  // Movement
+  if (input.isKeyDown(Config.KEY_BINDINGS.RIGHT)) {
+    //playerSprite.applyForce(playerSprite.CLOCKWISE.scale(speed));
+    playerSprite.rotateBy(50 * dt);
+  }
+  if (input.isKeyDown(Config.KEY_BINDINGS.LEFT)) {
+    //playerSprite.applyForce(playerSprite.CCLOCKWISE.scale(speed));
+    playerSprite.rotateBy(-50 * dt);
+  }
+  if (input.isKeyDown(Config.KEY_BINDINGS.UP)) {
+    // Only move forwards if the player is far from the cursor
+    var distance = playerSprite.position.distance(input.position);
+    if (distance > 100) {
+      playerSprite.applyForce(playerSprite.FORWARDS.scale(speed));
+    }
+  }
+  if (input.isKeyDown(Config.KEY_BINDINGS.DOWN)) {
+    playerSprite.applyForce(playerSprite.BACKWARDS.scale(speed));
+  }
+  */
+  
+  // Activate skills based on input (mouse or keyboard)
   var skill;
   for (var skillId in PLAYER.skills) {
     skill = PLAYER.skills[skillId];
@@ -313,23 +390,6 @@ function handlePlayerInput(dt) {
       Server.useSkill(skillId);
     }
   }
-
-
-
-  /*
-  if (input.isKeyDown(Config.KEY_BINDINGS.RIGHT)) {
-    playerSprite.applyForce(new window.Vector(speed, 0));
-  }
-  if (input.isKeyDown(Config.KEY_BINDINGS.LEFT)) {
-    playerSprite.applyForce(new window.Vector(-speed, 0));
-  }
-  if (input.isKeyDown(Config.KEY_BINDINGS.UP)) {
-    playerSprite.applyForce(new window.Vector(0, -speed));
-  }
-  if (input.isKeyDown(Config.KEY_BINDINGS.DOWN)) {
-    playerSprite.applyForce(new window.Vector(0, speed));
-  }
-  */
 }
 
 function onAfterDraw() {
@@ -502,6 +562,13 @@ var Server = (function() {
     
     sendPlayerTickData: function sendPlayerTickData() {
       this.socket.emit('updateTickData', PLAYER.toTickData());
+    },
+    
+    sendChatMessage: function sendChatMessage(message, windowId) {
+      this.socket.emit('chatNewMessage', {
+        'message': message,
+        'windowId': windowId
+      });
     },
     
     useSkill: function useSkill(id) {

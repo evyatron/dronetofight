@@ -19,7 +19,7 @@ var Sprite = (function() {
     this.acceleration = new Vector(0, 0);
 
     this.position = new Vector(0, 0);
-    this.angle = 0;
+    this.angle = -1;
     
     this.FORWARDS = new Vector(0, 0);
     this.BACKWARDS = new Vector(0, 0);
@@ -40,8 +40,9 @@ var Sprite = (function() {
       this.zIndex = options.zIndex || 0;
       this.maxSpeed = options.maxSpeed || Infinity;
       this.drag = options.drag || 0.9;
-      this.angle = options.angle || 0;
       this.color = options.color || '';
+      
+      this.rotateTo(options.angle || 0);
       
       if ('x' in options && 'y' in options) {
         this.position = new Vector(options.x, options.y);
@@ -82,7 +83,38 @@ var Sprite = (function() {
     },
 
     lookAt: function lookAt(target) {
-      this.angle = this.position.angle(target);
+      if (target) {
+        this.rotateTo(this.position.angle(target));
+      } else {
+        console.warn('Trying to look at nothing!');
+      }
+    },
+    
+    rotateBy: function rotateBy(angle) {
+      if (angle) {
+        this.rotateTo(this.angle + angle);
+      } else {
+        console.warn('Trying to rotate by nothing!');
+      }
+    },
+    
+    rotateTo: function rotateTo(angle) {
+      if (typeof angle !== 'number') {
+        console.warn('Not tryign to rotate to a number!', angle);
+        return;
+      }
+      
+      angle = Math.round(angle * 100) / 100;
+      
+      if (angle === this.angle) {
+        return;
+      }
+      
+      this.angle = angle;
+      
+      if (this.angle >= 360) {
+        this.angle = (this.angle % 360);
+      }
       
       this.FORWARDS = new window.Vector(1, 0).rotate(this.angle);
       this.BACKWARDS = new window.Vector(-1, 0).rotate(this.angle);

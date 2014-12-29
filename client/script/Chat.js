@@ -1,13 +1,18 @@
 var Chat = (function() {
-  var TEMPLATE_MESSAGE = '<span class="timestamp">[{{time}}]</span> ' +
-                         '<span class="message">{{playerName}}: {{message}}</span>';
+  var TEMPLATE_MESSAGE = '<span class="header">' +
+                            '<span class="timestamp">[{{time}}]</span> ' +
+                            '<span class="player">{{playerName}}</span>' +
+                          '</span>' +
+                          '<span class="message">{{message}}</span>';
   
   function Chat(options) {
-    this.elList;
+    this.elList = null;
+    this.elInput = null;
     this.types = {};
     this.elWindows = {};
     
-    this.current;
+    this.current = '';
+    this.isFocused = false;
     
     this.init(options);
   }
@@ -17,7 +22,73 @@ var Chat = (function() {
       !options && (options = {});
       
       this.elList = options.el;
+      this.elInput = this.elList.querySelector('input');
       this.types = options.types;
+      
+      this.onMessage = options.onMessage || function(){};
+      
+      window.addEventListener('GameInputKeyDown', this.onKeyDown.bind(this));
+      window.addEventListener('GameInputKeyUp', this.onKeyUp.bind(this));
+      this.elInput.addEventListener('focus', this.onFocus.bind(this));
+      this.elInput.addEventListener('blur', this.onBlur.bind(this));
+    },
+    
+    handleInput: function handleInput() {
+      var message = this.elInput.value;
+      
+      if (message) {
+        this.onMessage(message, this.current);
+        this.elInput.value = '';
+      }
+      
+      this.unfocus();
+    },
+    
+    onKeyDown: function onKeyDown(e) {
+      
+    },
+    
+    onKeyUp: function onKeyUp(e) {
+      var input = e.detail.input,
+          key = e.detail.key;
+
+      if (this.isFocused) {
+        if (input.is(key, Config.KEY_BINDINGS.CHAT_SEND_MESSAGE)) {
+          this.handleInput();
+        }
+      } else {
+        if (input.is(key, Config.KEY_BINDINGS.CHAT_ENTER)) {
+          this.focus();
+        }
+      }
+    },
+    
+    focus: function focus() {
+      if (this.isFocused) {
+        return;
+      }
+      
+      this.elInput.focus();
+      this.elList.classList.add('focused');
+      this.isFocused = true;
+    },
+    
+    unfocus: function unfocus() {
+      if (!this.isFocused) {
+        return;
+      }
+      
+      this.elInput.blur();
+      this.elList.classList.remove('focused');
+      this.isFocused = false;
+    },
+    
+    onFocus: function onFocus(e) {
+      this.focus();
+    },
+    
+    onBlur: function onBlur(e) {
+      this.unfocus();
     },
     
     addWindow: function addWindow(data) {

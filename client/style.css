@@ -6,9 +6,12 @@ div, p, ul, li {
 
 body {
   font: normal 15px monospace;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
+}
+body,
+input,
+select,
+option {
+  font: normal 15px monospace;
 }
 
 #container {
@@ -26,6 +29,9 @@ body {
 
 .game {
   background: #000;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 .game * {
   -pointer-events: none;
@@ -107,7 +113,7 @@ body {
   left: 50%;
   width: 200px;
   margin-left: -100px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   font-size: 0;
   text-align: center;
 }
@@ -166,16 +172,39 @@ body {
   position: absolute;
   bottom: 0;
   left: 0;
-  margin: 20px;
+  margin: 10px;
   width: 370px;
   height: 210px;
 }
+  .chat .input {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: rgba(0, 0, 0, 1);
+    border: 1px solid rgba(255, 255, 255, .7);
+    border-top-width: 0;
+  }
+    .chat .input input {
+      width: 100%;
+      height: 100%;
+      padding: 4px 6px;
+      font-size: 0.8em;
+      color: lime;
+      box-sizing: border-box;
+      background: transparent;
+      border: none;
+    }
+    .chat .input input:focus {
+      outline: none;
+    }
   .chat .window {
     position: absolute;
     top: 30px;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: 30px;
     z-index: 5;
   }
   .chat .window.active {
@@ -190,30 +219,31 @@ body {
       line-height: 24px;
       margin-bottom: -1px;
       padding: 0 4px;
-      border: 1px solid #fff;
+      border: 1px solid rgba(255, 255, 255, .5);
       color: #fff;
       z-index: 10;
       border-radius: 1px 1px 0 0;
       cursor: pointer;
     }
     .chat .window .name:hover {
-      background: rgba(255, 255, 255, 1);
+      background: rgba(255, 255, 255, .5);
       color: #000;
     }
-    .chat .window.active .name {
+    .chat .window.active .name,
+    .chat.focused .window.active .name {
       height: 30px;
       line-height: 28px;
       background: rgba(0, 0, 0, .5);
       border-bottom-color: #000;
       pointer-events: none;
     }
-    .chat .window:nth-child(2) .name {
+    .chat .window:nth-child(3) .name {
       margin-left: 79px;
     }
-    .chat .window:nth-child(3) .name {
+    .chat .window:nth-child(4) .name {
       margin-left: 158px;
     }
-    .chat .window:nth-child(4) .name {
+    .chat .window:nth-child(5) .name {
       margin-left: 237px;
     }
     
@@ -226,7 +256,7 @@ body {
       z-index: 5;
       font-size: 0.8em;
       opacity: 0;
-      border: 1px solid #fff;
+      border: 1px solid rgba(255, 255, 255, .5);
       background: rgba(0, 0, 0, .5);
       color: #fff;
       overflow-x: hidden;
@@ -243,12 +273,45 @@ body {
       .chat .window .messages > div {
         padding: 3px;
       }
-      .chat .window .messages .timestamp {
+      
+      .chat .window .messages span {
         display: inline-block;
       }
+      
+      
+      .chat .window .messages .header {
+        margin-right: 7px;
+        /*
+        margin-right: 3px;
+        padding: 2px 4px;
+        background: rgba(255, 255, 255, .1);
+        */
+      }
+        .chat .window .messages .timestamp {
+        }
+        .chat .window .messages .player {
+        }
+      .chat .window .messages .message {
+        color: lime;
+      }
+        .chat .window .messages .message b {
+          font-style: italic;
+        }
+      
+      
+      .chat .window .messages .server .header {
+        color: #bbb;
+      }
+      .chat .window .messages .server .player:after {
+        content: ':';
+      }
       .chat .window .messages .server .message {
+        color: #ccc;
         font-style: italic;
       }
-      .chat .window .messages .name {
-        font-weight: bold;
-      }
+      
+.chat.focused .input,
+.chat.focused .window .name,
+.chat.focused .window .messages{
+  border-color: rgba(255, 255, 255, 1);
+}

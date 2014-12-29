@@ -22,7 +22,8 @@ var Ship = (function() {
       }
 
       this.id = options.id;
-      this.speed = options.speed;
+      this.speed = options.speed || 0;
+      this.rotationSpeed = options.rotationSpeed || 0;
       this.isPlayer = Boolean(options.isPlayer);
 
       this.sprite = new window.Sprite({
@@ -30,6 +31,7 @@ var Ship = (function() {
         'type': window.SPRITE_TYPES.SHIP,
         'width': 50,
         'height': 50,
+        //'drag': 1,
         'maxSpeed': options.maxSpeed,
         'zIndex': options.zIndex
       });

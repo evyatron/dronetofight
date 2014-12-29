@@ -209,6 +209,20 @@ var Input = (function() {
         return !!this.keysDown[keys];
       }
     },
+    
+    is: function is(keyToCheck, keys) {
+      if (Array.isArray(keys)) {
+        for (var i = 0, key; (key = keys[i++]);) {
+          if (keyToCheck === key) {
+            return true;
+          }
+        }
+        
+        return false;
+      } else {
+        return keyToCheck === keys;
+      }
+    },
 
     // Update the user's mouse position
     // @e (MouseEvent)
@@ -221,33 +235,60 @@ var Input = (function() {
       this.position.x = (this._x - this.offsetX) / this.ratio;
       this.position.y = (this._y - this.offsetY) / this.ratio;
     },
+    
+    setKeyDown: function setKeyDown(key) {
+      if (this.keysDown[key]) {
+        return;
+      }
+      
+      this.keysDown[key] = true;
+      this.trigger('GameInputKeyDown', key);
+    },
+    
+    setKeyUp: function setKeyUp(key) {
+      if (!this.keysDown[key]) {
+        return;
+      }
+      
+      this.keysDown[key] = false;
+      this.trigger('GameInputKeyUp', key);
+    },
 
     // On keyboard event - mark the key as pressed
-    // @e (KeyDownEvent)
+    // @e (KeyDownEvent || Number)
     onKeyDown: function onKeyDown(e) {
-      this.keysDown[e.which || e.keyCode] = true;
+      this.setKeyDown(e.which || e.keyCode);
     },
 
     // On keyboard event - mark the key as not pressed anymore
-    // @e (KeyUpEvent)
+    // @e (KeyUpEvent || Number)
     onKeyUp: function onKeyUp(e) {
-      this.keysDown[e.which || e.keyCode] = false;
+      this.setKeyUp(e.which || e.keyCode);
     },
     
     onMouseDown: function onMouseDown(e) {
       if (e.button === 0) {
-        this.keysDown[this.KEY_LMB] = true;
+        this.setKeyDown(this.KEY_LMB);
       } else if (e.button === 2) {
-        this.keysDown[this.KEY_RMB] = true;
+        this.setKeyDown(this.KEY_RMB);
       }
     },
     
     onMouseUp: function onMouseUp(e) {
       if (e.button === 0) {
-        this.keysDown[this.KEY_LMB] = false;
+        this.setKeyUp(this.KEY_LMB);
       } else if (e.button === 2) {
-        this.keysDown[this.KEY_RMB] = false;
+        this.setKeyUp(this.KEY_RMB);
       }
+    },
+    
+    trigger: function trigger(event, key) {
+      window.dispatchEvent(new CustomEvent(event, {
+        'detail': {
+          'input': this,
+          'key': key
+        }
+      }));
     }
   };
 

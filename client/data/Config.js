@@ -94,5 +94,8 @@ Config.KEY_BINDINGS = {
   LEFT: [Config.KEYS.A, Config.KEYS.LEFT_ARROW],
   UP: [Config.KEYS.W, Config.KEYS.UP_ARROW],
   DOWN: [Config.KEYS.S, Config.KEYS.DOWN_ARROW],
-  TURBO: Config.KEYS.SPACE
+  TURBO: Config.KEYS.SPACE,
+  
+  CHAT_ENTER: [Config.KEYS.ENTER, Config.KEYS.T],
+  CHAT_SEND_MESSAGE: Config.KEYS.ENTER
 };
