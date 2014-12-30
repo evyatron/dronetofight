@@ -6,6 +6,7 @@ div, p, ul, li {
 
 body {
   font: normal 15px monospace;
+  background: #000;
 }
 body,
 input,
@@ -20,8 +21,7 @@ option {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #000;
-  overflow: hidden;
+  margin: 50px 0;
 }
 
 
@@ -48,7 +48,7 @@ option {
   margin: -100px 0;
   background: transparent
               url(http://th04.deviantart.net/fs70/PRE/i/2013/130/f/0/asteroid_stock_3_by_fimar-d64qqfu.png)
-              0 0
+              50% 50%
               repeat-x;
   background-size: contain;
 }
@@ -115,11 +115,41 @@ option {
   top: 0;
   left: 0;
   right: 0;
-  padding: 10px;
+  padding: 15px 10px;
   z-index: 50;
-  background: rgba(0, 0, 0, .8);
+  background: rgba(0, 20, 0, .8);
+  box-shadow: 0 0 5px 0 rgba(0, 0, 0, .8);
+  border-bottom: 1px solid #000;
   color: #fff;
+  transform: translateY(-100%);
+  transition: transform 180ms ease-in;
 }
+#ui:hover {
+  transform: translateY(0%);
+}
+#ui:before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 15px;
+  background: linear-gradient(to bottom, rgba(0, 128, 0, .5), rgba(0, 128, 0, 0));
+  background-size: 100% 25%;
+  transition: height 180ms ease-in;
+}
+#ui:after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 40px;
+}
+#ui:hover:before {
+  height: 0;
+}
+
   #ui label {
     display: inline-block;
     margin-right: 10px;

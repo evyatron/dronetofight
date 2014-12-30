@@ -115,10 +115,10 @@ var Game = (function() {
     },
 
     resize: function resize() {
-      var windowWidth = window.innerWidth,
-          windowHeight = window.innerHeight;
+      var width = this.elContainer.offsetWidth,
+          height = this.elContainer.offsetHeight;
 
-      this.ratio = Math.min(windowWidth / this.width, windowHeight / this.height);
+      this.ratio = Math.min(width / this.width, height / this.height);
       this.el.style.transform = 'scale(' + this.ratio + ')';
 
       if (this.Input) {
