@@ -573,7 +573,7 @@ var Players = (function Players() {
 
 var Server = (function() {
   function Server() {
-    this.socket = null;
+    this.socketIO = null;
     this.isConnected = false;
     
     this.intervalReconnect;
@@ -581,27 +581,25 @@ var Server = (function() {
   
   Server.prototype = {
     init: function init() {
-      this.socket = window.io.connect();
+      this.socketIO = window.io.connect();
+
+      this.socketIO.on('connect', this.onConnect.bind(this));
+      this.socketIO.on('disconnect', this.onDisconnect.bind(this));
       
-      console.info(this.socket)
+      this.socketIO.on('tick', serverTick);
+      this.socketIO.on('updatePlayers', Players.update.bind(Players));
       
-      this.socket.on('connect', this.onConnect.bind(this));
-      this.socket.on('disconnect', this.onDisconnect.bind(this));
+      this.socketIO.on('addPlayer', this.onAddPlayer.bind(this));
+      this.socketIO.on('ready', onPlayerReadyInServer);
+      this.socketIO.on('updateMetaData', this.onUpdatePlayerMetaData.bind(this));
       
-      this.socket.on('tick', serverTick);
-      this.socket.on('updatePlayers', Players.update.bind(Players));
+      this.socketIO.on('projectileAdd', Projectiles.add.bind(Projectiles));
+      this.socketIO.on('projectileRemove', Projectiles.remove.bind(Projectiles));
       
-      this.socket.on('addPlayer', this.onAddPlayer.bind(this));
-      this.socket.on('ready', onPlayerReadyInServer);
-      this.socket.on('updateMetaData', this.onUpdatePlayerMetaData.bind(this));
+      this.socketIO.on('joinGame', this.onJoinedGame.bind(this));
       
-      this.socket.on('projectileAdd', Projectiles.add.bind(Projectiles));
-      this.socket.on('projectileRemove', Projectiles.remove.bind(Projectiles));
-      
-      this.socket.on('joinGame', this.onJoinedGame.bind(this));
-      
-      this.socket.on('chatAddWindow', chat.addWindow.bind(chat));
-      this.socket.on('chatNewMessage', chat.addMessage.bind(chat));
+      this.socketIO.on('chatAddWindow', chat.addWindow.bind(chat));
+      this.socketIO.on('chatNewMessage', chat.addMessage.bind(chat));
     },
     
     onConnect: function onConnect() {
@@ -617,8 +615,9 @@ var Server = (function() {
     },
     
     attemptReconnect: function attemptReconnect() {
-      if (!this.socket.connecting && this.socket.reconnecting) {
-        this.socket.connect();
+      if (!this.socketIO.socket.connecting &&
+          !this.socketIO.socket.reconnecting) {
+        this.socketIO.socket.connect();
       }
     },
     
@@ -630,22 +629,22 @@ var Server = (function() {
 
     sendPlayerMetaData: function sendPlayerMetaData(meta) {
       console.info('[Server.emit] Send player meta data', meta);
-      this.socket.emit('updateMetaData', meta);
+      this.socketIO.emit('updateMetaData', meta);
     },
     
     sendPlayerTickData: function sendPlayerTickData() {
-      this.socket.emit('updateTickData', PLAYER.toTickData());
+      this.socketIO.emit('updateTickData', PLAYER.toTickData());
     },
     
     sendChatMessage: function sendChatMessage(message, windowId) {
-      this.socket.emit('chatNewMessage', {
+      this.socketIO.emit('chatNewMessage', {
         'message': message,
         'windowId': windowId
       });
     },
     
     useSkill: function useSkill(id) {
-      this.socket.emit('useSkill', id);
+      this.socketIO.emit('useSkill', id);
     },
     
     onUpdatePlayerMetaData: function nonUpdatePlayerMetaData(data) {
@@ -654,7 +653,7 @@ var Server = (function() {
 
     newPlayer: function newPlayer(player) {
       console.info('[Server.emit] New player', player);
-      this.socket.emit('newPlayer', player.toMetaData());
+      this.socketIO.emit('newPlayer', player.toMetaData());
     },
     
     onAddPlayer: function onAddPlayer(playerData) {
