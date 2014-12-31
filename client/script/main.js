@@ -574,14 +574,19 @@ var Players = (function Players() {
 var Server = (function() {
   function Server() {
     this.socket = null;
+    this.isConnected = false;
+    
+    this.intervalReconnect;
   }
   
   Server.prototype = {
     init: function init() {
       this.socket = window.io.connect();
       
-      this.socket.on('connect', onServerConnect);
-      this.socket.on('disconnect', onServerDisconnect);
+      console.info(this.socket)
+      
+      this.socket.on('connect', this.onConnect.bind(this));
+      this.socket.on('disconnect', this.onDisconnect.bind(this));
       
       this.socket.on('tick', serverTick);
       this.socket.on('updatePlayers', Players.update.bind(Players));
@@ -597,6 +602,24 @@ var Server = (function() {
       
       this.socket.on('chatAddWindow', chat.addWindow.bind(chat));
       this.socket.on('chatNewMessage', chat.addMessage.bind(chat));
+    },
+    
+    onConnect: function onConnect() {
+      onServerConnect();
+      this.isConnected = true;
+      window.clearInterval(this.intervalReconnect);
+    },
+    
+    onDisconnect: function onDisconnect() {
+      onServerDisconnect();
+      this.isConnected = false;
+      this.intervalReconnect = window.setInterval(this.attemptReconnect.bind(this), 1000);
+    },
+    
+    attemptReconnect: function attemptReconnect() {
+      if (!this.socket.connecting && this.socket.reconnecting) {
+        this.socket.connect();
+      }
     },
     
     onJoinedGame: function onJoinedGame(data) {
