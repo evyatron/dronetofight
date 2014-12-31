@@ -43,6 +43,13 @@ var Ship = (function() {
       this.sprite.el.appendChild(this.elName);
     },
     
+    destroy: function destroy() {
+      for (var id in this.skills) {
+        delete this.skills[id];
+      }
+      delete this.sprite;
+    },
+    
     addSkill: function addSkill(skill) {
       if (this.skills[skill.id]) {
         return;

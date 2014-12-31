@@ -1,4 +1,9 @@
-var CONFIG = {
+/**
+ * Configuration for the entire project
+ * @module Config
+ * @type {Object}
+ */
+module.exports = {
   EVENTS_FROM_CLIENT: {
     GAME: {
     },
@@ -89,5 +94,3 @@ var CONFIG = {
     }
   ]
 };
-
-module.exports = CONFIG;

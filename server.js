@@ -13,8 +13,8 @@ var express = require('express');
 var gameloop = require('node-gameloop');
 
 
-var Game = require('./server/Game.js');
-var Player = require('./server/Player.js');
+var Game = require('./server/Game');
+var Player = require('./server/Player');
 
 
 var GAMES = {};

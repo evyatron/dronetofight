@@ -24,7 +24,34 @@ option {
   margin: 50px 0;
 }
 
+#disconnected {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background: rgba(175, 175, 175, .7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 360ms ease-in-out;
+  text-align: center;
+  font-size: 32px;
+}
+  #disconnected:before {
+    content: '';
+    height: 100%;
+  }
+  #disconnected span,
+  #disconnected:before {
+    display: inline-block;
+    vertical-align: middle;
+  }
 
+.disconnected #disconnected {
+  opacity: 1;
+  pointer-events: inherit;
+}
 
 
 
@@ -75,6 +102,9 @@ option {
     background-position: 50% 50%;
     background-size: 100% 100%;
     background-repeat: no-repeat;
+  }
+  .sprite.projectile .content {
+    border-radius: 50%;
   }
     .sprite .content:before {
       content: '';

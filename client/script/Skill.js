@@ -62,16 +62,6 @@ var Skill = (function Skill() {
       if (data.isReady !== this.isReady) {
         this.setReady(data.isReady);
       }
-      
-      /*
-      var cooldownPercentage = Math.round(data.cooldownPercentage * 100) / 100;
-      if (cooldownPercentage !== this.cooldownPercentage) {
-        this.cooldownPercentage = cooldownPercentage;
-        //this.elCooldownTime.innerHTML = Math.round(this.cooldown * (1 - cooldownPercentage) * 10) / 10;
-        this.elCooldown.style.transform =
-          'translateY(' + (100 - cooldownPercentage*100) + '%)';
-      }
-      */
     },
     
     setReady: function setReady(isReady) {

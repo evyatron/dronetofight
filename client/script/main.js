@@ -15,6 +15,9 @@ var game,
     layerPlayers,
     layerForeground,
     PLAYER,
+    
+    lastServerTick = 0,
+    lastClientTick = 0,
 
     Config = window.Config;
 
@@ -125,7 +128,7 @@ var PlayerNameInput = (function() {
   };
   
   return new PlayerNameInput();
-}())
+}());
 
 function onPlayerReadyInServer(data) {
   console.info('[Server.on] Player ready in server', data);
@@ -145,9 +148,12 @@ function onPlayerReadyInServer(data) {
     'shipId': localStorage['playerShip'] || 1
   });
   
+  var elSkills = document.getElementById('skills');
+  elSkills.innerHTML = '';
   for (var skillId in data.skills) {
     var skillData = data.skills[skillId];
-    skillData.elContainer = document.getElementById('skills');
+    skillData.elContainer = elSkills;
+    
     PLAYER.addSkill(new window.Skill(skillData));
   }
   
@@ -318,6 +324,8 @@ function onBeforeUpdate(dt) {
     handlePlayerInput(dt);
     PLAYER.update(dt);
   }
+  
+  lastClientTick = Date.now();
 }
 
 function handlePlayerInput(dt) {
@@ -407,6 +415,22 @@ function serverTick(data) {
   
   // Update all other players in the game
   Players.tick(players);
+  
+  lastServerTick = Date.now();
+}
+
+function onServerConnect() {
+  document.body.classList.remove('disconnected');
+}
+
+function onServerDisconnect() {
+  document.body.classList.add('disconnected');
+  
+  layerPlayers.remove(PLAYER.sprite);
+  PLAYER.destroy();
+  PLAYER = null;
+  Projectiles.clear();
+  Players.clear();
 }
 
 var Projectiles = (function Projectiles() {
@@ -426,6 +450,8 @@ var Projectiles = (function Projectiles() {
         return;
       }
       
+      data.type = 'projectile';
+      
       this.projectiles[data.id] = new window.Sprite(data);
       
       layerProjectiles.add(this.projectiles[data.id]);
@@ -443,6 +469,12 @@ var Projectiles = (function Projectiles() {
       layerProjectiles.remove(this.projectiles[data.id]);
       
       delete this.projectiles[data.id];
+    },
+    
+    clear: function clear() {
+      for (var id in this.projectiles) {
+        this.remove(this.projectiles[id]);
+      }
     }
   };
   
@@ -488,10 +520,19 @@ var Players = (function Players() {
       // It means they were disconnected - so let's remove them
       for (var id in this.players) {
         if (!players[id]) {
-          layerPlayers.remove(this.players[id].sprite);
-          delete this.players[id];
+          this.remove(id);
         }
       }
+    },
+    
+    remove: function remove(playerId) {
+      if (playerId.id) {
+        playerId = playerId.id;
+      }
+      
+      layerPlayers.remove(this.players[playerId].sprite);
+      
+      delete this.players[playerId];
     },
     
     update: function update(players) {
@@ -517,6 +558,12 @@ var Players = (function Players() {
       }
       
       player.fromMetaData(meta);
+    },
+    
+    clear: function clear() {
+      for (var id in this.players) {
+        this.remove(this.players[id]);
+      }
     }
   };
   
@@ -532,6 +579,9 @@ var Server = (function() {
   Server.prototype = {
     init: function init() {
       this.socket = window.io.connect();
+      
+      this.socket.on('connect', onServerConnect);
+      this.socket.on('disconnect', onServerDisconnect);
       
       this.socket.on('tick', serverTick);
       this.socket.on('updatePlayers', Players.update.bind(Players));
