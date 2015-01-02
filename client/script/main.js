@@ -456,7 +456,7 @@ var Projectiles = (function Projectiles() {
       
       layerProjectiles.add(this.projectiles[data.id]);
       
-      console.log('Create new projectile', data);
+      console.log('[Projectile|' + data.id + '] Create', data);
     },
     
     remove: function remove(data) {
@@ -464,7 +464,7 @@ var Projectiles = (function Projectiles() {
         return;
       }
       
-      console.log('Remove projectile', data);
+      console.log('[Projectile|' + data.id + '] Remove', data);
       
       layerProjectiles.remove(this.projectiles[data.id]);
       

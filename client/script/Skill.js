@@ -3,7 +3,6 @@ var Skill = (function Skill() {
     this.el = null;
     this.elContainer = null;
     this.elCooldown = null;
-    this.elCooldownTime = null;
     
     this.id = '';
     this.name = '';
@@ -35,7 +34,7 @@ var Skill = (function Skill() {
       
       this.createHTML();
       
-      console.log('create new skill', options);
+      console.log('[Skill|' + this.id + '] Create', options);
     },
     
     update: function update(dt) {
@@ -89,7 +88,6 @@ var Skill = (function Skill() {
                           '</div>';
       
       this.elCooldown = this.el.querySelector('.cooldown b');
-      this.elCooldownTime = this.el.querySelector('.cooldown span');
       
       this.elContainer.appendChild(this.el);
     }
