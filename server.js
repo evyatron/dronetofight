@@ -104,3 +104,8 @@ String.prototype.format = function String_format(args) {
     return value;
   });
 };
+
+// Clamp a number between min/max range
+Math.clamp = function Math_Clamp(number, min, max) {
+  return Math.min(Math.max(number, min), max);
+};

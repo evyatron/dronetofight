@@ -16,6 +16,7 @@ var Sprite = (function() {
     this.drag = 0.9;
     
     this.isBoundToLayer = false;
+    this.bounceOffWalls = false;
 
     this.velocity = new Vector(0, 0);
     this.acceleration = new Vector(0, 0);
@@ -45,6 +46,7 @@ var Sprite = (function() {
       this.drag = options.drag || 0.9;
       this.color = options.color || '';
       this.isBoundToLayer = Boolean(options.isBoundToLayer);
+      this.bounceOffWalls = Boolean(options.bounceOffWalls);
       
       this.rotateTo(options.angle || 0);
       
@@ -72,18 +74,24 @@ var Sprite = (function() {
       this.acceleration.reset();
       
       if (this.isBoundToLayer && this.layer) {
-        
-      var layerWidth = 1920,
-          layerHeight = 1080;
-      
         var position = this.position,
             x = position.x,
             y = position.y,
             halfWidth = this.width / 2,
             halfHeight = this.height / 2;
 
-        position.x = Math.clamp(x, halfWidth, layerWidth - halfWidth);
-        position.y = Math.clamp(y, halfHeight, layerHeight - halfHeight);
+        
+        position.x = Math.clamp(x, halfWidth, this.layer.width - halfWidth);
+        position.y = Math.clamp(y, halfHeight, this.layer.height - halfHeight);
+        
+        if (this.bounceOffWalls) {
+          if (x !== position.x) {
+            this.velocity.x *= -1;
+          }
+          if (y !== position.y) {
+            this.velocity.y *= -1;
+          }
+        }
       }
     },
 

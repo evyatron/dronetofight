@@ -1,8 +1,11 @@
 var Layer = (function() {
   function Layer(options) {
-    this.id;
-    this.el;
-    this.zIndex;
+    this.id = '';
+    this.el = null;
+    this.zIndex = 0;
+    
+    this.width = 0;
+    this.height = 0;
 
     this.sprites = [];
     this.spritesMap = {};

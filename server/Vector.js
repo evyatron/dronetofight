@@ -63,6 +63,10 @@ Vector.prototype = {
     this.y = Math.clamp(this.y, min, max);
   },
   
+  length: function length() {
+    return Math.sqrt(this.x * this.x + this.y * this.y);
+  },
+  
   reset: function reset() {
     this.x = 0;
     this.y = 0;

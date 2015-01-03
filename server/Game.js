@@ -22,6 +22,9 @@ function Game(options) {
   
   this.numberOfTeams = 2;
   this.teams = [];
+  
+  this.width = 1920;
+  this.height = 1080;
 
   this.init(options);
 }

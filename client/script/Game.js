@@ -54,6 +54,9 @@ var Game = (function() {
           return false;
         }
       }
+      
+      layerToAdd.width = this.width;
+      layerToAdd.height = this.height;
 
       this.layers.push(layerToAdd);
       this.el.appendChild(layerToAdd.el);

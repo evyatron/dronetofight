@@ -6,7 +6,10 @@ var CHAT_TYPES = {
   SERVER: 'server',
   ALL: 'all'
 };
-
+var TEMPLATE_SHIP = '<li data-id="{{id}}">' +
+                      '<span class="image" style="background-image: url({{image}});"></span>' +
+                      '<span class="name">{{name}}</span>' +
+                    '</li>';
 
 var game,
     chat,
@@ -171,33 +174,54 @@ function onPlayerReadyInServer(data) {
 }
 
 function createUI(data) {
-  var el = document.getElementById('ships'),
+  var elUI = document.getElementById('ui'),
+      elShips = document.createElement('ul'),
       items = data.ships || [],
       html = '';
 
+  elShips.className = 'ships';
+
   for (var i = 0, item; (item = items[i++]);) {
-    html += '<option value="' + item.id + '">' + item.name + '</option>';
+    html += TEMPLATE_SHIP.format(item);
   }
+
+  elShips.innerHTML = html;
+  elShips.addEventListener('click', function onClickShips(e) {
+    var el = e.target,
+        shipId = el.dataset.id;
+    
+    if (shipId) {
+      changeShip(shipId);
+    }
+  });
   
-  el.addEventListener('change', onShipChange);
+  elUI.appendChild(elShips);
   
-  el.innerHTML = html;
-  
-  var elSelected = el.querySelector('option[value = "' + PLAYER.meta.shipId + '"]');
-  if (elSelected) {
-    elSelected.selected = true;
-  }
+  selectShipInUI();
 }
 
-function onShipChange() {
-  var shipId = document.getElementById('ships').value;
-  
+
+
+function changeShip(shipId) {
   localStorage['playerShip'] = shipId;
+  
   Server.sendPlayerMetaData({
     'shipId': shipId
   });
-  
-  document.getElementById('ships').blur();
+}
+
+function selectShipInUI() {
+  if (!PLAYER.meta.shipId) {
+    return;
+  }
+
+  var SELECTED_CLASS = 'selected',
+      elShips = document.querySelector('.ships'),
+      elCurrent = elShips.querySelector('.' + SELECTED_CLASS),
+      elNew = elShips.querySelector('[data-id = "' + PLAYER.meta.shipId + '"]');
+
+  elCurrent && elCurrent.classList.remove(SELECTED_CLASS);
+  elNew && elNew.classList.add(SELECTED_CLASS);
 }
 
 // When the starfields animations are done
@@ -558,6 +582,10 @@ var Players = (function Players() {
       }
       
       player.fromMetaData(meta);
+      
+      if (isOwnPlayer) {
+        selectShipInUI();
+      }
     },
     
     clear: function clear() {
@@ -625,6 +653,7 @@ var Server = (function() {
       console.info('Joined game', data);
       Players.update(data.players);
       document.getElementById('team').innerHTML = data.team;
+      document.body.classList.add('team-' + data.team);
     },
 
     sendPlayerMetaData: function sendPlayerMetaData(meta) {

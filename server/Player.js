@@ -146,7 +146,9 @@ Player.prototype = {
             'size': 8,
             'maxDistance': 800,
             'maxTime': 4,
-            'color': 'red'
+            'color': 'red',
+            'isBoundToLayer': true,
+            'bounceOffWalls': true
           }
         });
     
