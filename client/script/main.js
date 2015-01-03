@@ -1,5 +1,6 @@
 var SPRITE_TYPES = {
-  SHIP: 'ship'
+  SHIP: 'ship',
+  PROJECTILE: 'projectile'
 };
 var CHAT_TYPES = {
   TEAM: 'team',
@@ -178,7 +179,7 @@ function onPlayerReadyInServer(data) {
   
   PlayerNameInput.setValue(PLAYER.meta.name);
   
-  PLAYER.moveTo(game.width / 2, game.height / 2);
+  PLAYER.position = new Vector(game.width / 2, game.height / 2);
   
   Server.newPlayer(PLAYER);
 }
@@ -242,7 +243,7 @@ function selectShipInUI() {
 // Change the update method to the actual game (for capturing player input etc.)
 function onStarfieldsAnimationDone() {
   if (PLAYER) {
-    layerPlayers.add(PLAYER.sprite);
+    layerPlayers.add(PLAYER);
   }
 
   game.onBeforeUpdate = onBeforeUpdate;
@@ -360,7 +361,6 @@ var Starfields = (function Starfields() {
 function onBeforeUpdate(dt) {
   if (PLAYER) {
     handlePlayerInput(dt);
-    PLAYER.update(dt);
   }
   
   lastClientTick = Date.now();
@@ -376,11 +376,8 @@ function handlePlayerInput(dt) {
   }
 
   var input = game.Input,
-      playerSprite = PLAYER.sprite,
       speed = PLAYER.speed,
       rotationSpeed = PLAYER.rotationSpeed;
-
-      
 
   // Is turbo key down
   if (input.isKeyDown(Config.KEY_BINDINGS.TURBO)) {
@@ -389,16 +386,16 @@ function handlePlayerInput(dt) {
 
   // Movement
   if (input.isKeyDown(Config.KEY_BINDINGS.RIGHT)) {
-    playerSprite.rotateBy(rotationSpeed * dt);
+    PLAYER.rotateBy(rotationSpeed * dt);
   }
   if (input.isKeyDown(Config.KEY_BINDINGS.LEFT)) {
-    playerSprite.rotateBy(-rotationSpeed * dt);
+    PLAYER.rotateBy(-rotationSpeed * dt);
   }
   if (input.isKeyDown(Config.KEY_BINDINGS.UP)) {
-    playerSprite.applyForce(playerSprite.FORWARDS.scale(speed));
+    PLAYER.applyForce(PLAYER.FORWARDS.scale(speed));
   }
   if (input.isKeyDown(Config.KEY_BINDINGS.DOWN)) {
-    playerSprite.applyForce(playerSprite.BACKWARDS.scale(speed));
+    PLAYER.applyForce(PLAYER.BACKWARDS.scale(speed));
   }
   
   /*
@@ -464,7 +461,6 @@ function onServerConnect() {
 function onServerDisconnect() {
   document.body.classList.add('disconnected');
   
-  layerPlayers.remove(PLAYER.sprite);
   PLAYER.destroy();
   PLAYER = null;
   Projectiles.clear();
@@ -488,23 +484,17 @@ var Projectiles = (function Projectiles() {
         return;
       }
       
-      data.type = 'projectile';
-      
-      this.projectiles[data.id] = new window.Sprite(data);
+      this.projectiles[data.id] = new window.Projectile(data);
       
       layerProjectiles.add(this.projectiles[data.id]);
-      
-      console.log('[Projectile|' + data.id + '] Create', data);
     },
     
     remove: function remove(data) {
       if (!this.projectiles[data.id]) {
         return;
       }
-      
-      console.log('[Projectile|' + data.id + '] Remove', data);
-      
-      layerProjectiles.remove(this.projectiles[data.id]);
+
+      this.projectiles[data.id].destroy();
       
       delete this.projectiles[data.id];
     },
@@ -568,7 +558,7 @@ var Players = (function Players() {
         playerId = playerId.id;
       }
       
-      layerPlayers.remove(this.players[playerId].sprite);
+      this.players[playerId].destroy();
       
       delete this.players[playerId];
     },
@@ -592,7 +582,7 @@ var Players = (function Players() {
       
       if (!player && !isOwnPlayer) {
         player = this.players[id] = new window.Ship(meta);
-        layerPlayers.add(player.sprite);
+        layerPlayers.add(player);
       }
       
       player.fromMetaData(meta);

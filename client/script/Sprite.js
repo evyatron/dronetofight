@@ -1,4 +1,6 @@
 var Sprite = (function() {
+  var Vector = window.Vector;
+
   function Sprite(options) {
     this.el = null;
     this.elContent = null;
@@ -6,8 +8,11 @@ var Sprite = (function() {
     this.type = '';
     this.src = '';
     this.zIndex = 0;
-    this.maxSpeed = 0;
     this.color = '';
+    
+    this.speed = 0;
+    this.maxSpeed = 0;
+    this.rotationSpeed = 0;
 
     this.width = 0;
     this.height = 0;
@@ -29,9 +34,11 @@ var Sprite = (function() {
     this.CLOCKWISE = new Vector(0, 0);
     this.CCLOCKWISE = new Vector(0, 0);
     
-    this.layer;
+    this.layer = null;
     
-    this.init(options);
+    this.SHOULD_DRAW = true;
+    
+    Sprite.prototype.init.apply(this, arguments);
   }
 
   Sprite.prototype = {
@@ -42,7 +49,9 @@ var Sprite = (function() {
       this.type = options.type || '';
       this.src = options.image || '';
       this.zIndex = options.zIndex || 0;
+      this.speed =  options.speed || 0;
       this.maxSpeed = options.maxSpeed || Infinity;
+      this.rotationSpeed = options.rotationSpeed || 0;
       this.drag = options.drag || 0.9;
       this.color = options.color || '';
       this.isBoundToLayer = Boolean(options.isBoundToLayer);
@@ -57,10 +66,18 @@ var Sprite = (function() {
       if ('velocity' in options) {
         this.velocity = new Vector(options.velocity);
       }
+      
+      if ('SHOULD_DRAW' in options) {
+        this.SHOULD_DRAW = Boolean(options.SHOULD_DRAW);
+      }
 
-      this.create();
+      if (this.SHOULD_DRAW) {
+        this.create();
+      }
 
       this.setSize(options.width || 0, options.height || 0);
+    
+      console.log('[Sprite|' + this.type + '|' + this.id + '] Create', this);
     },
 
     update: function update(dt) {
@@ -96,6 +113,10 @@ var Sprite = (function() {
     },
 
     draw: function draw() {
+      if (!this.SHOULD_DRAW) {
+        return;
+      }
+
       var pos = this.position,
           x = Math.round((pos.x - this.width / 2) * 100) / 100,
           y = Math.round((pos.y - this.height / 2) * 100) / 100,
@@ -153,7 +174,10 @@ var Sprite = (function() {
       this.width = width;
       this.height = height;
 
-      this.el.style.cssText += 'width: ' + width + 'px; height: ' + height + 'px;';
+      if (this.el) {
+        this.el.style.cssText += 'width: ' + width + 'px;' +
+                                 'height: ' + height + 'px;';
+      }
     },
 
     setImage: function setImage(src) {
@@ -185,6 +209,11 @@ var Sprite = (function() {
       if (this.color) {
         this.elContent.style.backgroundColor = this.color;
       }
+    },
+    
+    destroy: function destroy() {
+      console.log('[Sprite|' + this.id + '] Destroy', this);
+      this.layer.remove(this);
     }
   };
 
