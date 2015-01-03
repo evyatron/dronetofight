@@ -136,19 +136,29 @@ var PlayerNameInput = (function() {
 function onPlayerReadyInServer(data) {
   console.info('[Server.on] Player ready in server', data);
   
+  var ships = data.ships;
+  
+  Config.SHIPS = {};
+  for (var i = 0, ship; (ship = ships[i++]);) {
+    Config.SHIPS[ship.id] = ship;
+  }
+  
+  var playerShipId = localStorage['playerShip'] || ships[0].id,
+      playerShip = Config.SHIPS[playerShipId];
+  
   // Create player ship
   PLAYER = new window.Ship({
     'id': data.id,
-    'speed': data.speed,
-    'maxSpeed': data.maxSpeed,
-    'rotationSpeed': data.rotationSpeed,
+    'speed': playerShip.data.speed,
+    'maxSpeed': playerShip.data.maxSpeed,
+    'rotationSpeed': playerShip.data.rotationSpeed,
     'zIndex': 100,
     'isPlayer': true
   });
   
   PLAYER.fromMetaData({
     'name': localStorage['playerName'] || ('Player_' + window.utils.random(1, 1000)),
-    'shipId': localStorage['playerShip'] || 1
+    'shipId': playerShipId
   });
   
   var elSkills = document.getElementById('skills');
@@ -164,7 +174,7 @@ function onPlayerReadyInServer(data) {
   Starfields.onReachedDestination();
   // -------
   
-  createUI(data.ui);
+  createUI(data.ships);
   
   PlayerNameInput.setValue(PLAYER.meta.name);
   
@@ -173,26 +183,21 @@ function onPlayerReadyInServer(data) {
   Server.newPlayer(PLAYER);
 }
 
-function createUI(data) {
+function createUI(ships) {
   var elUI = document.getElementById('ui'),
       elShips = document.createElement('ul'),
-      items = data.ships || [],
       html = '';
 
   elShips.className = 'ships';
 
-  for (var i = 0, item; (item = items[i++]);) {
-    html += TEMPLATE_SHIP.format(item);
+  for (var i = 0, ship; (ship = ships[i++]);) {
+    html += TEMPLATE_SHIP.format(ship);
   }
 
   elShips.innerHTML = html;
+  
   elShips.addEventListener('click', function onClickShips(e) {
-    var el = e.target,
-        shipId = el.dataset.id;
-    
-    if (shipId) {
-      changeShip(shipId);
-    }
+    changeShip(e.target.dataset.id);
   });
   
   elUI.appendChild(elShips);
@@ -200,9 +205,18 @@ function createUI(data) {
   selectShipInUI();
 }
 
-
-
 function changeShip(shipId) {
+  var ship = shipId && Config.SHIPS[shipId];
+  if (!ship) {
+    return;
+  }
+  
+  PLAYER.speed = ship.data.speed;
+  PLAYER.maxSpeed = ship.data.maxSpeed;
+  PLAYER.rotationSpeed = ship.data.rotationSpeed;
+  
+  console.warn('set:', PLAYER.rotationSpeed)
+  
   localStorage['playerShip'] = shipId;
   
   Server.sendPlayerMetaData({

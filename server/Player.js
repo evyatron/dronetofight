@@ -98,11 +98,8 @@ Player.prototype = {
     // Fire ready event to the client
     this.socket.emit(CONFIG.EVENTS_TO_CLIENT.PLAYER.READY, {
       'id': this.id,
-      'speed': this.speed,
-      'maxSpeed': this.maxSpeed,
-      'rotationSpeed': this.rotationSpeed,
       'skills': this.getSkillsMetaData(),
-      'ui': CONFIG.UI_DATA
+      'ships': CONFIG.SHIPS
     });
     
     console.log('[Player|' + this.id + '] Created');
@@ -159,7 +156,7 @@ Player.prototype = {
   useSkill: function useSkill(skillId) {
     var skill = this.skills[skillId];
     if (!skill) {
-      console.warn('[Player|' + skillId + '] Trying to use non existant skill?');
+      console.warn('[Player|' + skillId + '] Trying to use non existant skill');
       return;
     }
     
@@ -236,12 +233,36 @@ Player.prototype = {
 
     for (var k in data) {
       this.meta[k] = data[k];
+      
+      if (this['update_' + k]) {
+        this['update_' + k]();
+      }
     }
     
     // Used for display
     this.sanitizedName = this.meta.name.replace(/</g, '&lt');
     
     this.shouldSendMeta = true;
+  },
+  
+  update_shipId: function update_shipId() {
+    var ships = CONFIG.SHIPS,
+        playerShip;
+    
+    for (var i = 0, ship; (ship = ships[i++]);) {
+      if (ship.id === this.meta.shipId) {
+        playerShip = ship;
+        break;
+      }
+    }
+    
+    if (!playerShip) {
+      playerShip = CONFIG.SHIPS[0];
+    }
+    
+    this.speed = playerShip.speed;
+    this.maxSpeed = playerShip.maxSpeed;
+    this.rotationSpeed = playerShip.rotationSpeed;
   },
   
   // Expose the socket's emity functionality

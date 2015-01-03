@@ -118,7 +118,7 @@ option {
     background: rgba(255, 255, 255, .1);
   }
   
-  #ui .name {
+  #ui > .name {
     margin-top: 100px;
   }
   
@@ -164,12 +164,11 @@ option {
       }
       #ui .ships li .name {
         position: absolute;
-        top: 50%;
+        top: 0;
         right: 100%;
         padding: 0 6px;
         height: 30px;
         line-height: 30px;
-        margin-top: -15px;
         white-space: nowrap;
         z-index: 5;
         background: rgba(25, 82, 25, 1);
@@ -420,16 +419,6 @@ option {
 .sprite.projectile .content {
   border-radius: 50%;
 }
-  .sprite .content:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    right: -2px;
-    margin-top: -2px;
-    width: 4px;
-    height: 4px;
-    background: #000;
-  }
 .sprite .name {
   position: absolute;
   top: 100%;
