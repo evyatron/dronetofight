@@ -32,12 +32,6 @@ var Team = (function() {
     }
     
     this.maxHealth = options.maxHealth || 0;
-    
-    if ('currentHealth' in options) {
-      this.currentHealth = options.currentHealth;
-    } else {
-      this.currentHealth = this.maxHealth || 0;
-    }
 
     this.meta.name = options.name;
 
@@ -48,6 +42,10 @@ var Team = (function() {
     this.elHealth = elHealth.firstChild;
 
     this.el.appendChild(elHealth);
+    
+    this.fromServer({
+      'health': options.currentHealth
+    });
   };
   
   Team.prototype.fromServer = function fromServer(data) {

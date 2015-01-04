@@ -208,7 +208,7 @@ option {
     color: #ddd;
     text-align: center;
     box-shadow: 0 0 0 2px rgba(255, 255, 255, .5);
-    background: rgba(0, 0, 0, .8);
+    background: rgba(0, 0, 0, .9);
   }
   #skills li.ready {
     color: #fff;
