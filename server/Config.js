@@ -157,7 +157,7 @@ module.exports = {
     {
       "id": "team0",
       "name": "Team 0",
-      "health": 1000,
+      "health": 100,
       "sprite": {
         'x': 0,
         'y': 0,
@@ -169,7 +169,7 @@ module.exports = {
     {
       "id": "team1",
       "name": "Team 1",
-      "health": 1000,
+      "health": 100,
       "sprite": {
         'x': 1620,
         'y': 930,

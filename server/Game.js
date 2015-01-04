@@ -44,11 +44,30 @@ Game.prototype = {
   },
   
   createTeams: function createTeams(teams) {
-    for (var i = 0, team; (team = teams[i++]);) {
-      this.teams.push(new Team(team));
+    for (var i = 0, teamData; (teamData = teams[i++]);) {
+      var team = new Team(teamData);
+      team.game = this;
+      
+      team.on(team.HEALTH_EMPTY, this.onTeamHealthEmpty.bind(this));
+      team.on(team.RESPAWN, this.onTeamRespawn.bind(this));
+      team.on(team.LOSE, this.onTeamLose.bind(this));
+
+      this.teams.push(team);
     }
     
     console.log('create teams:', this.teams);
+  },
+  
+  onTeamHealthEmpty: function onTeamHealthEmpty() {
+    console.info('Team Health Empty', arguments);
+  },
+  
+  onTeamRespawn: function onTeamRespawn() {
+    console.info('Team Respawn', arguments);
+  },
+  
+  onTeamLose: function onTeamLose() {
+    console.info('Team LOST', arguments);
   },
   
   update: function update(dt) {

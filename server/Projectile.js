@@ -91,7 +91,7 @@ Projectile.prototype = {
       'teamId': options.teamId
     };
     
-    console.log('[Projectile|' + this.id + '] Data', this.meta);
+    //console.log('[Projectile|' + this.id + '] Data', this.meta);
     console.info('[Projectile|' + this.id + '] Create');
   },
   
