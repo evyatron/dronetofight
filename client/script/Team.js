@@ -13,8 +13,8 @@ var Team = (function() {
     Sprite.call(this, options);
 
     this.meta = {};
-    this.currentHealth = 0;
-    this.maxHealth = 0;
+    this.currentHealth = -1;
+    this.maxHealth = -1;
     
     this.elHealth = null;
 
