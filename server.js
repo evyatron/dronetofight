@@ -9,30 +9,17 @@ var path = require('path');
 var socketio = require('socket.io');
 var express = require('express');
 
-// For the actual game loop
-var gameloop = require('node-gameloop');
 
-
-var Game = require('./server/Game');
+var CONFIG = require('./server/Config');
 var Player = require('./server/Player');
+var GameManager = require('./server/GameManager');
 
-
-var GAMES = {};
-
-// Main Game Loop - update all games
-function gameLoop(delta) {
-  for (var id in GAMES) {
-    GAMES[id].update(delta);
-  }
-}
-
+var gameManager;
 
 function onServerReady() {
-  var game = new Game();
-  GAMES[game.id] = game;
-  
-  // Start the games loop
-  gameloop.setGameLoop(gameLoop, 1000 / 30);
+  gameManager = new GameManager({
+    
+  });
 }
 
 
@@ -45,7 +32,11 @@ function onNewSocketConnection(socket) {
 
 // The new player is ready on the client
 function onPlayerClientReady(player) {
-  player.joinGame(GAMES[Object.keys(GAMES)[0]]);
+  var games = gameManager.getGamesMetaData();
+  player.socket.emit(CONFIG.EVENTS_TO_CLIENT.GAMES, games);
+  
+  // auto join a game for now
+  player.joinGame(gameManager.getFirstJoinableGame());
 }
 
 //

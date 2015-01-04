@@ -32,7 +32,7 @@ function Team(options) {
   
   this.didLose = false;
   this.deaths = 0;
-  this.deathsToLose = 2;
+  this.deathsToLose = 1;
   
   this.game = null;
 
@@ -62,6 +62,8 @@ Team.prototype.init = function init(options) {
   this.bounds.y = this.spriteData.y;
   this.bounds.width = this.spriteData.width;
   this.bounds.height = this.spriteData.height;
+  
+  console.log('[Team|' + this.id + '] Created', this.name, this.maxHealth);
 };
 
 Team.prototype.update = function update(dt) {
@@ -125,7 +127,6 @@ Team.prototype.heal = function heal(value) {
 };
 
 Team.prototype.setHealth = function setHealth(health) {
-  console.log('set health:', health)
   if (this.didLose) {
     return;
   }
