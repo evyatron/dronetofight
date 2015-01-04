@@ -7,6 +7,7 @@ var uuid = require('node-uuid');
 
 var CONFIG = require('./Config');
 var Chat = require('./Chat');
+var Team = require('./Team');
 
 /**
  * Creates a new Game
@@ -20,7 +21,6 @@ function Game(options) {
   this.projectiles = {};
   this.chat;
   
-  this.numberOfTeams = 2;
   this.teams = [];
   
   this.width = 1920;
@@ -32,6 +32,7 @@ function Game(options) {
 Game.prototype = {
   init: function init(options) {
     this.id = 'game-' + uuid.v4();
+    
     this.chat = new Chat({
       'windows': CONFIG.CHAT_WINDOWS,
       'players': this.players,
@@ -39,16 +40,25 @@ Game.prototype = {
       'shouldSendLeaveMessages': true
     });
     
-    for (var i = 0; i < this.numberOfTeams; i++) {
-      this.teams.push(0);
+    this.createTeams(CONFIG.TEAMS);
+  },
+  
+  createTeams: function createTeams(teams) {
+    for (var i = 0, team; (team = teams[i++]);) {
+      this.teams.push(new Team(team));
     }
+    
+    console.log('create teams:', this.teams);
   },
   
   update: function update(dt) {
     var data = {
-          'players': {}
+          'players': {},
+          'teams': {}
         },
-        id;
+        id,
+        projectile,
+        i, team;
     
     // First update all players
     // Send the data in a second loop cause the last player might affect
@@ -57,14 +67,26 @@ Game.prototype = {
       this.players[id].update(dt);
     }
     
-    // Prepate data to be sent to the players
+    // Prepare data to be sent to the players
     for (id in this.players) {
       data.players[id] = this.players[id].getTickData();
     }
     
     // Update and send all projectiles information
     for (id in this.projectiles) {
-      this.projectiles[id].update(dt);
+      projectile = this.projectiles[id];
+      projectile.update(dt);
+      
+      for (i = 0; !projectile.isRemoved && (team = this.teams[i++]);) {
+        if (projectile.meta.teamId !== team.id && projectile.hits(team)) {
+          team.damage(projectile.power);
+        }
+      }
+    }
+    
+    // Prepare data to be sent to the players
+    for (i = 0; (team = this.teams[i++]);) {
+      data.teams[team.id] = team.update(dt);
     }
     
     this.broadcast(CONFIG.EVENTS_TO_CLIENT.GAME.TICK, data, true);
@@ -104,11 +126,12 @@ Game.prototype = {
     // Add the player to the list
     this.players[player.id] = player;
     
-    var playerTeam = this.getNextTeam();
-    player.updateMetaData({
-      'team': playerTeam
-    });
-    this.teams[playerTeam]++;
+    var team = this.getNextTeam();
+    if (team) {
+      team.addPlayer(player);
+    } else {
+      console.warn('[Game|' + this.id + '] No team found for player!', player);
+    }
     
     // Add the player to the chat window
     this.chat.addPlayer(player);
@@ -117,8 +140,9 @@ Game.prototype = {
   removePlayer: function removePlayer(player) {
     console.log('[Game|' + this.id + '] Remove player: ', player.meta);
     
-    var teamId = player.meta.team;
-    this.teams[teamId]--;
+    if (player.team) {
+      player.team.removePlayer(player);
+    }
     
     this.chat.removePlayer(player);
     
@@ -128,17 +152,15 @@ Game.prototype = {
   },
   
   getNextTeam: function getNextTeam() {
-    var iTeam = -1,
-        minTeamPlayers = Infinity;
+    var mostEmptyTeam = this.teams[0];
     
-    for (var i = 0; i < this.teams.length; i++) {
-      if (this.teams[i] < minTeamPlayers) {
-        minTeamPlayers = this.teams[i];
-        iTeam = i;
+    for (var i = 1, team; (team = this.teams[i++]);) {
+      if (team.getNumberOfPlayers() < mostEmptyTeam.getNumberOfPlayers()) {
+        mostEmptyTeam = team;
       }
     }
-    
-    return iTeam;
+
+    return mostEmptyTeam;
   },
   
   getPlayersList: function getPlayersList() {
@@ -153,10 +175,18 @@ Game.prototype = {
         'tick': player.tick
       };
     }
-    
-    console.log('[Game|' + this.id + '] Players list: ', players);
 
     return players;
+  },
+  
+  getTeamsList: function getTeamsList() {
+    var teams = {};
+    
+    for (var id in this.teams) {
+      teams[id] = this.teams[id].getMetaData();
+    }
+
+    return teams;
   },
 
   broadcast: function broadcast(event, data, isTick) {

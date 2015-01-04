@@ -150,5 +150,33 @@ module.exports = {
       'id': 'team',
       'name': 'Team'
     }
+  ],
+  STATIC_SPRITES: [
+  ],
+  TEAMS: [
+    {
+      "id": "team0",
+      "name": "Team 0",
+      "health": 1000,
+      "sprite": {
+        'x': 0,
+        'y': 0,
+        'width': 300,
+        'height': 150,
+        'color': 'rgba(255, 0, 0, 0.3)'
+      }
+    },
+    {
+      "id": "team1",
+      "name": "Team 1",
+      "health": 1000,
+      "sprite": {
+        'x': 1620,
+        'y': 930,
+        'width': 300,
+        'height': 150,
+        'color': 'rgba(0, 0, 255, 0.3)'
+      }
+    }
   ]
 };

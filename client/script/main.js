@@ -1,4 +1,5 @@
 var SPRITE_TYPES = {
+  TEAM: 'team',
   SHIP: 'ship',
   PROJECTILE: 'projectile'
 };
@@ -31,6 +32,7 @@ function start() {
     'width': 1920,
     'height': 1080,
     'onBeforeUpdate': Starfields.update.bind(Starfields),
+    'onAfterUpdate': onAfterUpdate,
     'onAfterDraw': onAfterDraw
   });
   
@@ -138,7 +140,7 @@ function onPlayerReadyInServer(data) {
   console.info('[Server.on] Player ready in server', data);
   
   var ships = data.ships;
-  
+
   Config.SHIPS = {};
   for (var i = 0, ship; (ship = ships[i++]);) {
     Config.SHIPS[ship.id] = ship;
@@ -162,7 +164,7 @@ function onPlayerReadyInServer(data) {
     'shipId': playerShipId
   });
   
-  var elSkills = document.getElementById('skills');
+  var elSkills = document.querySelector('#skills ul');
   elSkills.innerHTML = '';
   for (var skillId in data.skills) {
     var skillData = data.skills[skillId];
@@ -175,6 +177,8 @@ function onPlayerReadyInServer(data) {
   Starfields.onReachedDestination();
   // -------
   
+  createStaticSprites(data.sprites);
+  
   createUI(data.ships);
   
   PlayerNameInput.setValue(PLAYER.meta.name);
@@ -182,6 +186,30 @@ function onPlayerReadyInServer(data) {
   PLAYER.position = new Vector(game.width / 2, game.height / 2);
   
   Server.newPlayer(PLAYER);
+}
+
+function onPlayerJoinGame(data) {
+  console.info('Joined game', data);
+  
+  Players.update(data.players);
+  
+  Teams.init(data.teams);
+  
+  document.getElementById('team').innerHTML = Teams.get(data.team).meta.name;
+}
+
+function createStaticSprites(sprites) {
+  if (!sprites) {
+    return;
+  }
+  
+  if (!Array.isArray(sprites)) {
+    sprites = [sprites];
+  }
+  
+  for (var i = 0, data; (data = sprites[i++]);) {
+    layerBackground.add(new Sprite(data));
+  }
 }
 
 function createUI(ships) {
@@ -215,9 +243,7 @@ function changeShip(shipId) {
   PLAYER.speed = ship.data.speed;
   PLAYER.maxSpeed = ship.data.maxSpeed;
   PLAYER.rotationSpeed = ship.data.rotationSpeed;
-  
-  console.warn('set:', PLAYER.rotationSpeed)
-  
+
   localStorage['playerShip'] = shipId;
   
   Server.sendPlayerMetaData({
@@ -366,6 +392,10 @@ function onBeforeUpdate(dt) {
   lastClientTick = Date.now();
 }
 
+function onAfterUpdate(dt) {
+  Projectiles.testCollisions();
+}
+
 function handlePlayerInput(dt) {
   if (!PLAYER) {
     return;
@@ -396,6 +426,12 @@ function handlePlayerInput(dt) {
   }
   if (input.isKeyDown(Config.KEY_BINDINGS.DOWN)) {
     PLAYER.applyForce(PLAYER.BACKWARDS.scale(speed));
+  }
+  if (input.isKeyDown(Config.KEY_BINDINGS.STRAFE_LEFT)) {
+    PLAYER.applyForce(PLAYER.LEFT.scale(speed / 2));
+  }
+  if (input.isKeyDown(Config.KEY_BINDINGS.STRAFE_RIGHT)) {
+    PLAYER.applyForce(PLAYER.RIGHT.scale(speed / 2));
   }
   
   /*
@@ -443,6 +479,7 @@ function onAfterDraw() {
 
 function serverTick(data) {
   var players = data.players,
+      teams = data.teams,
       ownData = data.playerData;
 
   // Update the own player
@@ -450,6 +487,9 @@ function serverTick(data) {
   
   // Update all other players in the game
   Players.tick(players);
+  
+  // Update all teams
+  Teams.tick(teams);
   
   lastServerTick = Date.now();
 }
@@ -473,9 +513,20 @@ var Projectiles = (function Projectiles() {
   }
   
   Projectiles.prototype = {
-    update: function update(dt) {
+    testCollisions: function testCollisions(dt) {
+      var teams = Teams.get(),
+          projectile;
+      
       for (var id in this.projectiles) {
-        this.projectiles[id].update(dt);
+        projectile = this.projectiles[id];
+        
+        for (var teamId in teams) {
+          if (!projectile.isDestroyed && 
+              projectile.teamId !== teamId &&
+              projectile.hits(teams[teamId])) {
+            break;
+          }
+        }
       }
     },
     
@@ -507,6 +558,38 @@ var Projectiles = (function Projectiles() {
   };
   
   return new Projectiles();
+}());
+
+var Teams = (function Teams() {
+  function Teams() {
+    this.teams = {};
+  }
+  
+  Teams.prototype = {
+    init: function init(teams) {
+      for (var i = 0, team; (team = teams[i++]);) {
+        this.teams[team.id] = new Team(team);
+        layerBackground.add(this.teams[team.id]);
+      }
+      
+      console.log('Created teams', this.teams);
+    },
+    
+    get: function get(id) {
+      return id ? this.teams[id] : this.teams;
+    },
+    
+    tick: function tick(teams) {
+      for (var id in teams) {
+        var team = this.teams[id];
+        if (team) {
+          team.fromServer(teams[id]);
+        }
+      }
+    }
+  };
+  
+  return new Teams();
 }());
 
 var Players = (function Players() {
@@ -602,7 +685,6 @@ var Players = (function Players() {
   return new Players();
 }());
 
-
 var Server = (function() {
   function Server() {
     this.socketIO = null;
@@ -628,7 +710,7 @@ var Server = (function() {
       this.socketIO.on('projectileAdd', Projectiles.add.bind(Projectiles));
       this.socketIO.on('projectileRemove', Projectiles.remove.bind(Projectiles));
       
-      this.socketIO.on('joinGame', this.onJoinedGame.bind(this));
+      this.socketIO.on('joinGame', onPlayerJoinGame);
       
       this.socketIO.on('chatAddWindow', chat.addWindow.bind(chat));
       this.socketIO.on('chatNewMessage', chat.addMessage.bind(chat));
@@ -651,13 +733,6 @@ var Server = (function() {
           !this.socketIO.socket.reconnecting) {
         this.socketIO.socket.connect();
       }
-    },
-    
-    onJoinedGame: function onJoinedGame(data) {
-      console.info('Joined game', data);
-      Players.update(data.players);
-      document.getElementById('team').innerHTML = data.team;
-      document.body.classList.add('team-' + data.team);
     },
 
     sendPlayerMetaData: function sendPlayerMetaData(meta) {

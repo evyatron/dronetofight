@@ -18,6 +18,7 @@ function Projectile(options) {
   this.speed = -1;
   this.width = 0;
   this.height = 0;
+  this.power = 0;
   this.maxDistance = -1;
   this.maxTime = -1;
   this.color = '';
@@ -33,12 +34,12 @@ function Projectile(options) {
   this.velocity = new Vector();
   
   this.maxConditionReached = false;
-  this.onReachedMaxCondition = null;
   
   this.isBoundToLayer = false;
   this.bounceOffWalls = false;
   
   this.game = null;
+  this.isRemoved = false;
   
   this.init(options);
 }
@@ -48,14 +49,14 @@ Projectile.prototype = {
     !options && (options = {});
     
     this.id = options.id || ('projectile-' + uuid.v4());
-    this.onReachedMaxCondition = options.onReachedMaxCondition || function(){};
     
-    this.speed = options.data.speed;
-    this.width = options.data.width || options.data.size || 0;
-    this.height = options.data.height || options.data.size || 0;
-    this.maxDistance = options.data.maxDistance || 0;
-    this.maxTime =options.data.maxTime || 0;
-    this.color = options.data.color;
+    this.speed = options.speed;
+    this.width = options.width || options.size || 0;
+    this.height = options.height || options.size || 0;
+    this.maxDistance = options.maxDistance || 0;
+    this.maxTime =options.maxTime || 0;
+    this.color = options.color || 'transparent';
+    this.power = options.power || 0;
     
     this.angle = options.angle;
     
@@ -63,11 +64,11 @@ Projectile.prototype = {
     this.position = new Vector(this.startPosition);
     this.velocity = new Vector(this.speed, this.speed).rotate(this.angle - 45);
     
-    if ('isBoundToLayer' in options.data) {
-      this.isBoundToLayer = Boolean(options.data.isBoundToLayer);
+    if ('isBoundToLayer' in options) {
+      this.isBoundToLayer = Boolean(options.isBoundToLayer);
     }
-    if ('bounceOffWalls' in options.data) {
-      this.bounceOffWalls = Boolean(options.data.bounceOffWalls);
+    if ('bounceOffWalls' in options) {
+      this.bounceOffWalls = Boolean(options.bounceOffWalls);
     }
     
     if (options.velocity) {
@@ -86,11 +87,30 @@ Projectile.prototype = {
       'color': this.color,
       'maxDistance': this.maxDistance,
       'isBoundToLayer': this.isBoundToLayer,
-      'bounceOffWalls': this.bounceOffWalls
+      'bounceOffWalls': this.bounceOffWalls,
+      'teamId': options.teamId
     };
     
     console.log('[Projectile|' + this.id + '] Data', this.meta);
     console.info('[Projectile|' + this.id + '] Create');
+  },
+  
+  hits: function hits(bounds) {
+    if (bounds.bounds) {
+      bounds = bounds.bounds;
+    }
+    
+    var x = this.position.x,
+        y = this.position.y,
+        doesHit = x > bounds.x && x < bounds.x + bounds.width &&
+                  y > bounds.y && y < bounds.y + bounds.height;
+    
+    if (doesHit) {
+      this.isRemoved = true;
+      this.game.removeProjectile(this, 'hit');
+    }
+    
+    return doesHit;
   },
   
   update: function update(dt) {
@@ -123,7 +143,6 @@ Projectile.prototype = {
       }
     }
 
-
     if (this.maxDistance) {
       this.distanceTraveled += distanceTraveled.length();
       
@@ -140,9 +159,9 @@ Projectile.prototype = {
       }
     }
     
-    
     if (this.maxConditionReached) {
-      this.onReachedMaxCondition(this, this.maxConditionReached);
+      this.isRemoved = true;
+      this.game.removeProjectile(this, this.maxConditionReached);
     }
   }
 };

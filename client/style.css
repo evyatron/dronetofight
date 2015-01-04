@@ -22,7 +22,7 @@ option {
   left: 0;
   right: 0;
   bottom: 0;
-  margin: 0 80px 0 10px;
+  margin: 50px 70px 50px 0;
 }
 
 #disconnected {
@@ -193,6 +193,11 @@ option {
   font-size: 0;
   text-align: center;
 }
+  #skills ul {
+    list-style-type: none;
+    padding: 0 20px;
+    border-bottom: 2px solid white;
+  }
   #skills li {
     position: relative;
     display: inline-block;
@@ -200,12 +205,14 @@ option {
     height: 40px;
     line-height: 40px;
     margin: 0 10px;
+    color: #ddd;
     text-align: center;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, .7);
-    background: rgba(255, 255, 255, .2);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .5);
+    background: rgba(0, 0, 0, .8);
   }
   #skills li.ready {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 1);
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 1);
   }
   #skills li .name {
     position: absolute;
@@ -241,7 +248,7 @@ option {
     }
     #skills li .cooldown b {
       z-index: 5;
-      background: rgba(255, 255, 255, .3);
+      background: rgba(255, 255, 255, .2);
     }
 
 .chat {
@@ -429,15 +436,32 @@ option {
   text-align: center;
   transform: translateZ(0);
 }
-.sprite .health {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  width: 150px;
-  margin-left: -75px;
-  margin-top: 20px;
-}
 
 .sprite.enemy .name {
   color: #d00;
 }
+
+.sprite.team .health {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  margin: 0 8px;
+  width: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 1);
+}
+.sprite.team[data-id = 'team0'] .health {
+  left: 100%;
+}
+.sprite.team[data-id = 'team1'] .health {
+  right: 100%;
+}
+  .sprite.team .health b {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: red;
+  }

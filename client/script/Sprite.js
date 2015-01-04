@@ -16,9 +16,10 @@ var Sprite = (function() {
 
     this.width = 0;
     this.height = 0;
+    this.isCentered = false;
 
     this.mass = 1;
-    this.drag = 0.9;
+    this.drag = 1;
     
     this.isBoundToLayer = false;
     this.bounceOffWalls = false;
@@ -37,6 +38,7 @@ var Sprite = (function() {
     this.layer = null;
     
     this.SHOULD_DRAW = true;
+    this.isDestroyed = false;
     
     Sprite.prototype.init.apply(this, arguments);
   }
@@ -54,6 +56,7 @@ var Sprite = (function() {
       this.rotationSpeed = options.rotationSpeed || 0;
       this.drag = options.drag || 0.9;
       this.color = options.color || '';
+      this.isCentered = Boolean(options.isCentered);
       this.isBoundToLayer = Boolean(options.isBoundToLayer);
       this.bounceOffWalls = Boolean(options.bounceOffWalls);
       
@@ -118,8 +121,9 @@ var Sprite = (function() {
       }
 
       var pos = this.position,
-          x = Math.round((pos.x - this.width / 2) * 100) / 100,
-          y = Math.round((pos.y - this.height / 2) * 100) / 100,
+          centered = this.isCentered,
+          x = Math.round((pos.x - (centered? this.width / 2 : 0)) * 100) / 100,
+          y = Math.round((pos.y - (centered? this.height / 2 : 0)) * 100) / 100,
           angle = Math.round(this.angle * 1000) / 1000;
 
       this.el.style.transform = 'translate3d(' + x + 'px, ' + y + 'px, 0)';
@@ -166,8 +170,8 @@ var Sprite = (function() {
       
       this.FORWARDS = new window.Vector(1, 0).rotate(this.angle);
       this.BACKWARDS = new window.Vector(-1, 0).rotate(this.angle);
-      this.CLOCKWISE = new window.Vector(1, 1).rotate(this.angle);
-      this.CCLOCKWISE = new window.Vector(1, -1).rotate(this.angle);
+      this.LEFT = new window.Vector(0, -1).rotate(this.angle);
+      this.RIGHT = new window.Vector(0, 1).rotate(this.angle);
     },
 
     setSize: function setSize(width, height) {
@@ -201,6 +205,8 @@ var Sprite = (function() {
       
       this.el.innerHTML = '<div class="content"></div>';
       
+      this.el.dataset.id = this.id;
+      
       this.elContent = this.el.querySelector('.content');
       
       if (this.src) {
@@ -212,8 +218,13 @@ var Sprite = (function() {
     },
     
     destroy: function destroy() {
+      if (this.isDestroyed) {
+        return;
+      }
+
       console.log('[Sprite|' + this.id + '] Destroy', this);
       this.layer.remove(this);
+      this.isDestroyed = true;
     }
   };
 

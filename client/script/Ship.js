@@ -4,14 +4,18 @@ var Ship = (function() {
   function Ship(options) {
     options.type = window.SPRITE_TYPES.SHIP;
     options.isBoundToLayer = true;
+    options.isCentered = true;
     !options.id && (options.id = 'ship_' + Date.now());
     !options.width && (options.width = 50);
     !options.height && (options.height = 50);
+    !options.drag && (options.drag = 0.95);
 
     Sprite.call(this, options);
 
     this.meta = {};
     this.skills = {};
+    
+    this.elName = null;
     
     this.isPlayer = false;
 

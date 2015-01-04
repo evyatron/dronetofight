@@ -7,6 +7,7 @@ var uuid = require('node-uuid');
 var CONFIG = require('./Config');
 var Skill = require('./Skill');
 var Projectile = require('./Projectile');
+var extend = require('util')._extend;
 
 var READ_ONLY_META = {
   'id': true,
@@ -56,6 +57,9 @@ function Player(socket, options) {
 
   // A reference to the player's game
   this.game = null;
+  
+  // A reference to the player's team
+  this.team = null;
   
   // Whether to send the meta data in the tick
   // Resets to true when something is updated
@@ -130,6 +134,7 @@ Player.prototype = {
             'size': 6,
             'maxDistance': 600,
             'maxTime': 2,
+            'power': 12,
             'color': 'white'
           }
         }),
@@ -143,6 +148,7 @@ Player.prototype = {
             'size': 8,
             'maxDistance': 800,
             'maxTime': 4,
+            'power': 30,
             'color': 'red',
             'isBoundToLayer': true,
             'bounceOffWalls': true
@@ -163,14 +169,15 @@ Player.prototype = {
     var wasUsed = skill.use();
     
     if (wasUsed && this.game) {
-      this.game.addProjectile(new Projectile({
-        'data': skill.projectileData,
+      var projectileData = extend(skill.projectileData, {
         'x': this.tick.x,
         'y': this.tick.y,
         'angle': this.tick.angle,
         'velocity': this.tick.velocity,
-        'onReachedMaxCondition': this.game.removeProjectile.bind(this.game)
-      }));
+        'teamId': this.team.id
+      });
+      
+      this.game.addProjectile(new Projectile(projectileData));
     }
   },
   
@@ -205,7 +212,8 @@ Player.prototype = {
     this.socket.emit(CONFIG.EVENTS_TO_CLIENT.PLAYER.JOIN_GAME, {
       'id': game.id,
       'team': this.meta.team,
-      'players': game.getPlayersList()
+      'players': game.getPlayersList(),
+      'teams': game.getTeamsList()
     });
   },
   
@@ -218,7 +226,15 @@ Player.prototype = {
       this.socket.emit(CONFIG.EVENTS_TO_CLIENT.PLAYER.LEAVE_GAME);
     }
   },
-
+  
+  setTeam: function setTeam(team) {
+    this.team = team;
+    
+    this.updateMetaData({
+      'team': team? team.id : null
+    });
+  },
+  
   // Player disconnected - remove from game
   disconnect: function disconnect() {
     console.log('[Player|' + this.id + '] Disconnected');

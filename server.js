@@ -19,10 +19,6 @@ var Player = require('./server/Player');
 
 var GAMES = {};
 
-// Create a demo single game for now
-var MAIN_GAME = new Game();
-GAMES[MAIN_GAME.id] = MAIN_GAME;
-
 // Main Game Loop - update all games
 function gameLoop(delta) {
   for (var id in GAMES) {
@@ -30,9 +26,14 @@ function gameLoop(delta) {
   }
 }
 
-// Start the game loop
-gameloop.setGameLoop(gameLoop, 1000 / 30);
 
+function onServerReady() {
+  var game = new Game();
+  GAMES[game.id] = game;
+  
+  // Start the games loop
+  gameloop.setGameLoop(gameLoop, 1000 / 30);
+}
 
 
 // New connection - new player joined the server
@@ -44,7 +45,7 @@ function onNewSocketConnection(socket) {
 
 // The new player is ready on the client
 function onPlayerClientReady(player) {
-  player.joinGame(MAIN_GAME);
+  player.joinGame(GAMES[Object.keys(GAMES)[0]]);
 }
 
 //
@@ -74,6 +75,8 @@ var serverIP = process.env.IP || '0.0.0.0';
 server.listen(serverPort, serverIP, function onServerStarted(){
   var addr = server.address();
   console.log('Game server listening at', addr.address + ':' + addr.port);
+  
+  onServerReady();
 });
 
 
